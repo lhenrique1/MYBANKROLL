@@ -84,6 +84,16 @@ h1 span { color: var(--green); text-shadow: 0 0 28px rgba(var(--green-rgb),0.5);
 /* MAIN */
 main { max-width: 820px; margin: 0 auto; padding: 16px 12px; position: relative; z-index: 1; }
 
+/* CALCULADORA ODDS & EV */
+.calc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.calc-result-box { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 13px 16px; font-size: 13px; font-weight: 600; color: var(--text); }
+.calc-result-box span:last-child { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--muted); }
+.calc-result-box span:last-child.pos { color: var(--green); }
+.calc-result-box span:last-child.neg { color: var(--red); }
+.calc-result-box-accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.calc-result-box-accent span:first-child { color: var(--on-accent); }
+.calc-result-box-accent span:last-child { color: var(--on-accent) !important; }
+
 /* TEAMS */
 .teams-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-bottom: 12px; }
 .vs-badge { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--muted); letter-spacing: 2px; }
@@ -326,6 +336,7 @@ main { max-width: 820px; margin: 0 auto; padding: 16px 12px; position: relative;
 <div class="nav-tabs" role="tablist" aria-label="Navegação principal">
   <button type="button" class="nav-tab active" role="tab" aria-selected="true" aria-controls="page-analise" onclick="switchTab('analise')">Análise</button>
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="page-historico" onclick="switchTab('historico')">Histórico</button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="page-calculadora" onclick="switchTab('calculadora')">Odds &amp; EV</button>
 </div>
 
 <!-- ─── ANÁLISE ─── -->
@@ -455,6 +466,91 @@ main { max-width: 820px; margin: 0 auto; padding: 16px 12px; position: relative;
   <div id="hist-lista"></div>
 </div>
 
+<!-- ─── CALCULADORA DE ODDS & EV ─── -->
+<div id="page-calculadora" class="page">
+<main>
+  <div class="section" style="animation-delay:.05s">
+    <div class="section-header">
+      <span class="section-icon si-blue">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </span>
+      <span class="section-title">1: Dados da Aposta</span>
+    </div>
+    <div style="padding:12px">
+      <div class="teams-row" style="margin-bottom:12px">
+        <div class="team-input-wrap">
+          <label>Time da Casa</label>
+          <input type="text" id="calc_time1" placeholder="Time da Casa">
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="team-input-wrap" style="text-align:right">
+          <label>Time de Fora</label>
+          <input type="text" id="calc_time2" placeholder="Time de Fora">
+        </div>
+      </div>
+      <div class="team-input-wrap">
+        <label>Palpite da Partida</label>
+        <input type="text" id="calc_palpite" placeholder="Ex: Over 2.5 gols">
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="animation-delay:.1s">
+    <div class="section-header">
+      <span class="section-icon si-green">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+      </span>
+      <span class="section-title">2: Probabilidade e Odds</span>
+    </div>
+    <div style="padding:12px">
+      <div class="team-input-wrap" style="margin-bottom:10px">
+        <label>Probabilidade Estimada (%)</label>
+        <input type="number" id="calc_prob" step="0.1" min="0" max="100" placeholder="Ex: 74.3" oninput="atualizarCalculadora()">
+      </div>
+      <div class="calc-result-box calc-result-box-accent">
+        <span>Odd Decimal (Justa)</span>
+        <span id="calc_odd_justa">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="animation-delay:.15s">
+    <div class="section-header">
+      <span class="section-icon si-red">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </span>
+      <span class="section-title">3: Valor Esperado (EV)</span>
+    </div>
+    <div style="padding:12px">
+      <div class="calc-two-col" style="margin-bottom:10px">
+        <div class="team-input-wrap">
+          <label>Odd Ref. (Pinnacle)</label>
+          <input type="number" id="calc_odd_ref" step="0.01" min="1" placeholder="1.00" oninput="atualizarCalculadora()">
+        </div>
+        <div class="team-input-wrap">
+          <label>Odd Tomada (Casa)</label>
+          <input type="number" id="calc_odd_tomada" step="0.01" min="1" placeholder="1.00" oninput="atualizarCalculadora()">
+        </div>
+      </div>
+      <div class="calc-result-box">
+        <span>Valor Esperado (EV)</span>
+        <span id="calc_ev">—</span>
+      </div>
+      <button class="btn-save" id="calc-btn-save" style="width:100%;margin-top:10px" onclick="salvarCalculadora()" disabled>💾 Salvar no Histórico</button>
+    </div>
+  </div>
+
+  <div class="hist-header" style="margin-top:14px">
+    <div>
+      <div class="hist-title">📁 Histórico Salvo</div>
+      <div class="hist-count" id="calc-hist-count">0 registros</div>
+    </div>
+    <button class="btn-clear-all" onclick="limparCalculadora()">🗑 Limpar Tudo</button>
+  </div>
+  <div id="calc-hist-lista"></div>
+</main>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -466,10 +562,12 @@ function switchTab(tab) {
     t.setAttribute('aria-selected', 'false');
   });
   document.getElementById('page-' + tab).classList.add('active');
-  const activeTab = document.querySelectorAll('.nav-tab')[tab === 'analise' ? 0 : 1];
+  const idxMap = { analise: 0, historico: 1, calculadora: 2 };
+  const activeTab = document.querySelectorAll('.nav-tab')[idxMap[tab]];
   activeTab.classList.add('active');
   activeTab.setAttribute('aria-selected', 'true');
   if (tab === 'historico') renderHistorico();
+  if (tab === 'calculadora') renderCalculadora();
 }
 
 // ─── TEMA DE CORES ─────────────────────────
@@ -978,6 +1076,111 @@ function addSugestao(textareaId, texto) {
   const atual = ta.value.trim();
   ta.value = atual ? atual + ' + ' + texto : texto;
   ta.focus();
+}
+
+// ─── CALCULADORA DE ODDS & EV ──────────────
+function atualizarCalculadora() {
+  const prob = parseFloat(document.getElementById('calc_prob').value);
+  const oddJustaEl = document.getElementById('calc_odd_justa');
+  if (prob && prob > 0 && prob <= 100) {
+    oddJustaEl.textContent = (100 / prob).toFixed(2);
+  } else {
+    oddJustaEl.textContent = '—';
+  }
+
+  const oddRef = parseFloat(document.getElementById('calc_odd_ref').value);
+  const oddTomada = parseFloat(document.getElementById('calc_odd_tomada').value);
+  const evEl = document.getElementById('calc_ev');
+  const btnSave = document.getElementById('calc-btn-save');
+  evEl.classList.remove('pos', 'neg');
+  if (oddRef && oddRef >= 1 && oddTomada && oddTomada >= 1) {
+    const ev = (oddTomada / oddRef - 1) * 100;
+    evEl.textContent = (ev >= 0 ? '+' : '') + ev.toFixed(2) + '%';
+    evEl.classList.add(ev >= 0 ? 'pos' : 'neg');
+    btnSave.disabled = false;
+  } else {
+    evEl.textContent = '—';
+    btnSave.disabled = true;
+  }
+}
+
+function getCalcHist() { try { return JSON.parse(localStorage.getItem('xgols_calc_hist') || '[]'); } catch { return []; } }
+function setCalcHist(d) { localStorage.setItem('xgols_calc_hist', JSON.stringify(d)); }
+
+function salvarCalculadora() {
+  const t1 = document.getElementById('calc_time1').value.trim() || 'Time da Casa';
+  const t2 = document.getElementById('calc_time2').value.trim() || 'Time de Fora';
+  const palpite = document.getElementById('calc_palpite').value.trim();
+  const prob = parseFloat(document.getElementById('calc_prob').value) || null;
+  const oddRef = parseFloat(document.getElementById('calc_odd_ref').value);
+  const oddTomada = parseFloat(document.getElementById('calc_odd_tomada').value);
+  if (!oddRef || !oddTomada) return;
+  const ev = (oddTomada / oddRef - 1) * 100;
+
+  const item = {
+    id: Date.now(),
+    ts: Date.now(),
+    t1, t2, palpite,
+    prob: prob !== null ? +prob.toFixed(1) : null,
+    oddRef: +oddRef.toFixed(2),
+    oddTomada: +oddTomada.toFixed(2),
+    ev: +ev.toFixed(2)
+  };
+  const h = getCalcHist();
+  h.unshift(item);
+  setCalcHist(h);
+  renderCalculadora();
+  showToast('Salvo no histórico!');
+}
+
+function deletarItemCalculadora(id) {
+  const h = getCalcHist().filter(x => x.id !== id);
+  setCalcHist(h);
+  renderCalculadora();
+}
+
+function limparCalculadora() {
+  if (!confirm('Deseja apagar todo o histórico da calculadora?')) return;
+  localStorage.removeItem('xgols_calc_hist');
+  renderCalculadora();
+}
+
+function toggleCalcCard(id) {
+  const el = document.getElementById('chcard_' + id);
+  if (el) el.classList.toggle('expanded');
+}
+
+function renderCalculadora() {
+  const h = getCalcHist();
+  const countEl = document.getElementById('calc-hist-count');
+  const listaEl = document.getElementById('calc-hist-lista');
+  if (!countEl || !listaEl) return;
+  countEl.textContent = h.length + (h.length === 1 ? ' registro' : ' registros');
+  listaEl.innerHTML = h.map(x => {
+    const badgeClass = x.ev >= 5 ? 'forte' : x.ev >= 0 ? 'moderada' : 'evitar';
+    return `<div class="hist-card" id="chcard_${x.id}">
+      <div class="hist-card-header" onclick="toggleCalcCard(${x.id})">
+        <div class="hist-card-matchup">
+          <div class="hist-card-teams">${x.t1} × ${x.t2}</div>
+          <div class="hist-card-date">${fmtDate(x.ts)}</div>
+        </div>
+        <span class="hist-card-badge ${badgeClass}">${x.ev >= 0 ? '+' : ''}${x.ev}% EV</span>
+        <span class="hist-card-toggle">▼</span>
+      </div>
+      <div class="hist-card-body">
+        ${x.palpite ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">🎯 ${x.palpite}</div>` : ''}
+        <div class="hist-mini-stats">
+          <div class="hist-mini-stat"><div class="hlabel">Prob (%)</div><div class="hvalue blue">${x.prob !== null ? x.prob + '%' : '—'}</div></div>
+          <div class="hist-mini-stat"><div class="hlabel">Ref / Tomada</div><div class="hvalue">${x.oddRef} / ${x.oddTomada}</div></div>
+          <div class="hist-mini-stat"><div class="hlabel">EV (%)</div><div class="hvalue ${x.ev >= 0 ? 'green' : 'red'}">${x.ev >= 0 ? '+' : ''}${x.ev}%</div></div>
+        </div>
+        <div class="hist-footer">
+          <div></div>
+          <button class="btn-del-hist" onclick="deletarItemCalculadora(${x.id})">Remover</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">Nenhum registro salvo ainda.</div>';
 }
 
 // ─── TOAST ─────────────────────────────────
