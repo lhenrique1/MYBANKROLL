@@ -51,10 +51,10 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 
 /* TABS */
 .nav-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-.nav-tab { flex: 1; padding: 16px; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); cursor: pointer; border: 0; background: transparent; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s, background 0.2s; user-select: none; }
-.nav-tab:hover { background: rgba(var(--ink-rgb),0.02); }
+.nav-tab { flex: 1; padding: 17px 10px; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--text-strong); opacity: 0.55; cursor: pointer; border: 0; background: transparent; border-bottom: 3px solid transparent; transition: color 0.2s, opacity 0.2s, border-color 0.2s, background 0.2s; user-select: none; }
+.nav-tab:hover { background: rgba(var(--ink-rgb),0.02); opacity: 0.85; }
 .nav-tab:focus-visible, .btn-analyze:focus-visible, .btn-save:focus-visible, .btn-clear-all:focus-visible, .btn-save-result:focus-visible, .btn-del-hist:focus-visible, .popt:focus-visible, .sug-chip:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+.nav-tab.active { color: var(--green); opacity: 1; border-bottom-color: var(--green); }
 
 /* PAGES */
 .page { display: none; }
