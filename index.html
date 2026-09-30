@@ -87,6 +87,9 @@ main{padding-bottom:24px}
 select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);max-width:190px}
 .addb{display:flex;gap:8px;margin-top:8px}
 .addb input{min-width:0;flex:1;text-align:left;font-family:"IBM Plex Sans",system-ui,sans-serif}
+#resumo .calc{margin-top:0}
+#resumo .tile{padding:12px}
+#resumo .tile b{font-size:22px}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -108,6 +111,7 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
   #t-entrada>.row{grid-column:2}
   #t-metrica{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
   #t-metrica>.card{margin-bottom:0}
+  #t-metrica>#resumo{grid-column:1 / -1}
   #sheet{align-items:center}
   .panel{border-radius:18px;max-width:560px;max-height:90%}
 }
@@ -145,6 +149,7 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
 </div>
 </section>
 <section id="t-metrica" hidden>
+<div class="card" id="resumo"></div>
 <div class="card" id="tx"></div>
 <div class="card" id="bk">
   <div style="display:flex;justify-content:space-between;align-items:center"><strong>Banca</strong><span class="bkv" id="bkv" style="margin:0"></span></div>
@@ -207,6 +212,37 @@ function detail(k){
       "<b class='"+cl+"' style='font-family:\"IBM Plex Mono\",monospace;white-space:nowrap'>"+(g?"+"+brl(val(c.gain)):brl(-val(c.loss)))+"</b></div>";
   }).join("");
   return "<tr class='det'><td colspan='4' style='background:var(--bg);font-size:14px;white-space:normal'>"+h+"</td></tr>";
+}
+function pb(v,base,sg){if(!(base>0))return "—";var t=Math.abs(v/base*100).toFixed(2).replace(".",",")+"%";return (v<0?"-":(sg&&v>0?"+":""))+t}
+function bank(){
+  var b=S.banca||0,past=0,k,c=S.cfg;
+  for(k in S.days){if(k!==cur)past+=pnl(S.days[k])}
+  var open=b+past,day=pnl(ents()),atual=open+day,acc=past+day;
+  var bv=document.getElementById("bkv");
+  if(b>0){bv.textContent=brl(atual);bv.className="bkv "+(acc>0?"pos":acc<0?"neg":"")}
+  else{bv.textContent="Definir banca";bv.className="bkv"}
+  document.getElementById("pill").textContent=bv.textContent;
+  document.getElementById("resumo").innerHTML='<div class="calc">'+
+    '<div class="tile"><small>Lucro total</small><b class="'+(acc>0?"pos":acc<0?"neg":"")+'">'+brl(acc)+'</b><small>'+(b>0?pb(acc,b,true)+" sobre o investido":"defina a banca inicial")+'</small></div>'+
+    '<div class="tile"><small>Total investido</small><b>'+(b>0?brl(b):"—")+'</b><small>banca inicial</small></div></div>';
+  function t(l,v,cl,x){return '<div class="tile"><small>'+l+'</small><b class="'+cl+'">'+v+'</b>'+(x?'<small>'+x+'</small>':'')+'</div>'}
+  document.getElementById("bkcalc").innerHTML=
+    t("Banca atual",b>0?brl(atual):"—",acc>0?"pos":acc<0?"neg":"")+
+    t("Acumulado",b>0?brl(acc):"—",acc>0?"pos":acc<0?"neg":"",pb(acc,b,true)+" sobre a inicial")+
+    t("Hoje",pb(day,open,true),day>0?"pos":day<0?"neg":"","sobre a banca de abertura")+
+    t("Risco por operação",pb(val(c.loss),open,false),"","Perda máx. dia: "+pb(c.perdaMax,open,false));
+}
+function fp(v){return (Math.round(v*10)/10).toString().replace(".",",")+"%"}
+function rate(){
+  var w=0,l=0,k,c=S.cfg;
+  for(k in S.days)S.days[k].forEach(function(x){x.r==="gain"?w++:l++});
+  var n=w+l,lim=c.loss/(c.gain+c.loss)*100,pct=n?w/n*100:0,ok=n&&pct>=lim;
+  var chip=n?'<span class="chip '+(ok?"ok":"no")+'">'+(ok?"Acima do limite":"Abaixo do limite")+'</span>':'<span class="chip" style="background:var(--line);color:var(--mut)">Sem entradas</span>';
+  document.getElementById("tx").innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center"><strong>Taxa de acerto</strong>'+chip+'</div>'+
+    '<div class="pnl '+(n?(ok?"pos":"neg"):"")+'" style="font-size:30px;margin-top:6px">'+(n?fp(pct):"—")+'</div>'+
+    '<div class="bar"><i class="'+(n&&!ok?"bad":"")+'" style="width:'+Math.min(pct,100)+'%"></i><u style="left:'+Math.min(lim,100)+'%" data-l="Limite '+fp(lim)+'"></u></div>'+
+    '<div class="sub" style="margin:0">'+w+' gain · '+l+' loss · '+n+' entrada'+(n===1?"":"s")+'</div>';
 }
 function render(){
   if(today()!==cur){cur=today()}
