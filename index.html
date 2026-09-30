@@ -188,7 +188,6 @@ function ents(){return S.days[cur]||(S.days[cur]=[])}
 function pnl(e){return e.reduce(function(a,x){return a+(x.r==="gain"?val(S.cfg.gain):-val(S.cfg.loss))},0)}
 function lockState(){
   var e=ents(),p=pnl(e);
-  if(e.some(function(x){return x.r==="gain"}))return "Meta alcançada. Ordens bloqueadas até amanhã.";
   if(p<=-S.cfg.perdaMax)return "Perda máxima diária atingida. Ordens bloqueadas até amanhã.";
   if(e.length>=S.cfg.tentativas)return "Limite de "+S.cfg.tentativas+" tentativas atingido. Ordens bloqueadas até amanhã.";
   return null;
