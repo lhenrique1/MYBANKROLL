@@ -83,6 +83,10 @@ label.prm{display:flex;align-items:center;justify-content:space-between;gap:12px
 .dock{margin:0 0 12px}
 .dock .pl{gap:6px}
 main{padding-bottom:24px}
+.brk{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);max-width:190px}
+.addb{display:flex;gap:8px;margin-top:8px}
+.addb input{min-width:0;flex:1;text-align:left;font-family:"IBM Plex Sans",system-ui,sans-serif}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -111,7 +115,7 @@ main{padding-bottom:24px}
 </head>
 <body>
 <main>
-<header class="top"><h1>TraderControl</h1><div class="hr"><button class="pill" id="pill" data-go="metrica" aria-label="Ver banca"></button><button class="kebab" id="kebab" aria-label="Configurar parâmetros do plano"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header>
+<header class="top"><div><h1>TraderControl</h1><small class="brk" id="brk"></small></div><div class="hr"><button class="pill" id="pill" data-go="metrica" aria-label="Ver banca"></button><button class="kebab" id="kebab" aria-label="Configurar parâmetros do plano"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header>
 <div class="dock"><div class="pl" id="plano"></div></div>
 <nav class="tabs" role="tablist">
   <button class="tab on" data-tab="entrada" role="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Entrada</button>
@@ -154,6 +158,11 @@ main{padding-bottom:24px}
 <div id="sheet" hidden style="position:fixed;inset:0;background:rgba(10,25,20,.5);display:flex;align-items:flex-end;justify-content:center;z-index:8">
   <div class="panel" role="dialog" aria-label="Parâmetros do plano">
     <div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:18px">Parâmetros do plano</strong><button class="sec" data-close style="flex:none;padding:8px 14px">Fechar</button></div>
+    <div class="lbl" style="margin-top:12px">Corretora</div>
+    <label class="prm"><span>Ativa<small>usada nas novas entradas</small></span><select id="corrSel"></select></label>
+    <div class="addb"><input id="corrNew" type="text" maxlength="40" placeholder="Nova corretora"><button class="sec" id="corrAdd" style="flex:none;padding:9px 14px">Adicionar</button></div>
+    <button class="sec" id="corrDel" style="width:100%;margin:8px 0 14px;color:var(--loss)">Remover selecionada</button>
+    <div class="lbl">Parâmetros</div>
     <div class="cfgs" id="cfg"></div>
     <div class="calc" id="calc"></div>
   </div>
@@ -163,8 +172,8 @@ main{padding-bottom:24px}
 <script>
 var KEY="controlador-win-v1";
 var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2};
-var S={cfg:Object.assign({},DEF),days:{},banca:0};
-try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0}}catch(e){}
+var S={cfg:Object.assign({},DEF),days:{},banca:0,corr:["XP Investimentos"],corrAtiva:"XP Investimentos"};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 var cur=today();
@@ -182,45 +191,22 @@ function lockState(){
 function add(r){
   if(lockState())return;
   var d=new Date();
-  ents().push({r:r,t:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
+  ents().push({r:r,t:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"),b:S.corrAtiva});
   save();render();
 }
+function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 var OPEN={};
 function detail(k){
   if(!OPEN[k])return "";
-  var c=S.cfg,h=S.days[k].map(function(x,i){
-    var g=x.r==="gain";
-    return "<div style='display:flex;justify-content:space-between;gap:8px;padding:4px 0'><span>Tentativa "+(i+1)+" · "+x.t+" · <b class='"+(g?"pos":"neg")+"'>"+(g?"GAIN":"LOSS")+"</b></span><span class='"+(g?"pos":"neg")+"'>"+(g?"+"+brl(val(c.gain)):brl(-val(c.loss)))+"</span></div>";
+  var c=S.cfg,dt=k.split("-").reverse().join("/");
+  var h=S.days[k].map(function(x,i){
+    var g=x.r==="gain",cl=g?"pos":"neg";
+    return "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)'>"+
+      "<div style='min-width:0'><div>Tentativa "+(i+1)+" · <b class='"+cl+"'>"+(g?"GAIN":"LOSS")+"</b></div>"+
+      "<div style='font-size:13px;color:var(--ink);margin-top:2px'>"+(x.b?"<b>"+esc(x.b)+"</b><br>":"")+"<span style='color:var(--mut)'>"+dt+" às "+esc(x.t)+"</span></div></div>"+
+      "<b class='"+cl+"' style='font-family:\"IBM Plex Mono\",monospace;white-space:nowrap'>"+(g?"+"+brl(val(c.gain)):brl(-val(c.loss)))+"</b></div>";
   }).join("");
-  return "<tr class='det'><td colspan='4' style='background:var(--bg);font-size:14px'>"+h+"</td></tr>";
-}
-function pb(v,base,sg){if(!(base>0))return "—";var t=Math.abs(v/base*100).toFixed(2).replace(".",",")+"%";return (v<0?"-":(sg&&v>0?"+":""))+t}
-function bank(){
-  var b=S.banca||0,past=0,k,c=S.cfg;
-  for(k in S.days){if(k!==cur)past+=pnl(S.days[k])}
-  var open=b+past,day=pnl(ents()),atual=open+day,acc=past+day;
-  var bv=document.getElementById("bkv");
-  if(b>0){bv.textContent=brl(atual);bv.className="bkv "+(acc>0?"pos":acc<0?"neg":"")}
-  else{bv.textContent="Definir banca";bv.className="bkv"}
-  document.getElementById("pill").textContent=bv.textContent;
-  function t(l,v,cl,x){return '<div class="tile"><small>'+l+'</small><b class="'+cl+'">'+v+'</b>'+(x?'<small>'+x+'</small>':'')+'</div>'}
-  document.getElementById("bkcalc").innerHTML=
-    t("Banca atual",b>0?brl(atual):"—",acc>0?"pos":acc<0?"neg":"")+
-    t("Acumulado",b>0?brl(acc):"—",acc>0?"pos":acc<0?"neg":"",pb(acc,b,true)+" sobre a inicial")+
-    t("Hoje",pb(day,open,true),day>0?"pos":day<0?"neg":"","sobre a banca de abertura")+
-    t("Risco por operação",pb(val(c.loss),open,false),"","Perda máx. dia: "+pb(c.perdaMax,open,false));
-}
-function fp(v){return (Math.round(v*10)/10).toString().replace(".",",")+"%"}
-function rate(){
-  var w=0,l=0,k,c=S.cfg;
-  for(k in S.days)S.days[k].forEach(function(x){x.r==="gain"?w++:l++});
-  var n=w+l,lim=c.loss/(c.gain+c.loss)*100,pct=n?w/n*100:0,ok=n&&pct>=lim;
-  var chip=n?'<span class="chip '+(ok?"ok":"no")+'">'+(ok?"Acima do limite":"Abaixo do limite")+'</span>':'<span class="chip" style="background:var(--line);color:var(--mut)">Sem entradas</span>';
-  document.getElementById("tx").innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center"><strong>Taxa de acerto</strong>'+chip+'</div>'+
-    '<div class="pnl '+(n?(ok?"pos":"neg"):"")+'" style="font-size:30px;margin-top:6px">'+(n?fp(pct):"—")+'</div>'+
-    '<div class="bar"><i class="'+(n&&!ok?"bad":"")+'" style="width:'+Math.min(pct,100)+'%"></i><u style="left:'+Math.min(lim,100)+'%" data-l="Limite '+fp(lim)+'"></u></div>'+
-    '<div class="sub" style="margin:0">'+w+' gain · '+l+' loss · '+n+' entrada'+(n===1?"":"s")+'</div>';
+  return "<tr class='det'><td colspan='4' style='background:var(--bg);font-size:14px;white-space:normal'>"+h+"</td></tr>";
 }
 function render(){
   if(today()!==cur){cur=today()}
@@ -295,9 +281,31 @@ document.addEventListener("click",function(ev){var b=ev.target.closest("[data-ta
     if(i>=0&&i<TABS.length)go(TABS[i]);
   },{passive:true});
 })();
+function renderCorr(){
+  if(S.corr.indexOf(S.corrAtiva)<0)S.corrAtiva=S.corr[0];
+  var sel=document.getElementById("corrSel");sel.innerHTML="";
+  S.corr.forEach(function(n){var o=document.createElement("option");o.value=n;o.textContent=n;if(n===S.corrAtiva)o.selected=true;sel.appendChild(o)});
+  document.getElementById("brk").textContent=S.corrAtiva;
+  document.getElementById("corrDel").disabled=S.corr.length<2;
+}
+document.getElementById("corrSel").addEventListener("change",function(ev){S.corrAtiva=ev.target.value;save();renderCorr()});
+document.getElementById("corrAdd").onclick=function(){
+  var inp=document.getElementById("corrNew"),n=inp.value.trim().slice(0,40);
+  if(!n)return;
+  var ex=S.corr.filter(function(x){return x.toLowerCase()===n.toLowerCase()})[0];
+  if(!ex)S.corr.push(n);
+  S.corrAtiva=ex||n;inp.value="";save();renderCorr();
+};
+document.getElementById("corrDel").onclick=function(){
+  if(S.corr.length<2)return;var n=S.corrAtiva;
+  ask("Remover a corretora "+n+"? As entradas já registradas continuam no histórico.",function(){
+    S.corr=S.corr.filter(function(x){return x!==n});S.corrAtiva=S.corr[0];save();renderCorr();
+  });
+};
 var bki=document.getElementById("bkin");
 if(S.banca>0)bki.value=S.banca;
 bki.addEventListener("input",function(){var v=parseFloat(bki.value);S.banca=v>0?v:0;save();render()});
+renderCorr();
 buildCfg();render();
 setInterval(render,60000);
 </script>
