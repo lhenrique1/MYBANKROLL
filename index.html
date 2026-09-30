@@ -1,1262 +1,284 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<script>(function(){try{if(localStorage.getItem('xgols_theme')==='berger')document.documentElement.setAttribute('data-theme','berger');}catch(e){}})();</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="xGols Premium: analise partidas com modelo Poisson, histórico local e registro dos seus palpites.">
-<meta name="theme-color" content="#05080f">
-<title>xGols Premium</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TraderControl</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #05080f;
-  --surface: #0d1523;
-  --surface2: #111d2e;
-  --ink-rgb: 255,255,255;
-  --border: rgba(var(--ink-rgb),0.07);
-  --green-rgb: 0,230,118;
-  --green: rgb(var(--green-rgb));
-  --green-dim: rgba(var(--green-rgb),0.12);
-  --yellow-rgb: 255,213,79;
-  --yellow: rgb(var(--yellow-rgb));
-  --red-rgb: 255,82,82;
-  --red: rgb(var(--red-rgb));
-  --text: #e8eaf6;
-  --text-strong: rgb(var(--ink-rgb));
-  --muted: #546e7a;
-  --accent-rgb: 0,180,216;
-  --accent: rgb(var(--accent-rgb));
-  --on-accent: #000;
-}
-
-/* TEMA BERGER — claro, branco + verde-petróleo */
-html[data-theme="berger"] {
-  --bg: #eef3f1;
-  --surface: #ffffff;
-  --surface2: #e7f0ec;
-  --ink-rgb: 14,33,28;
-  --border: rgba(var(--ink-rgb),0.12);
-  --green-rgb: 12,107,94;
-  --yellow-rgb: 180,83,9;
-  --red-rgb: 220,38,38;
-  --text: #1c2b27;
-  --muted: #4f6b65;
-  --accent-rgb: 14,116,144;
-  --on-accent: #fff;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
-body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
-
-/* TABS */
-.nav-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-.nav-tab { flex: 1; padding: 17px 10px; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--text-strong); opacity: 0.55; cursor: pointer; border: 0; background: transparent; border-bottom: 3px solid transparent; transition: color 0.2s, opacity 0.2s, border-color 0.2s, background 0.2s; user-select: none; }
-.nav-tab:hover { background: rgba(var(--ink-rgb),0.02); opacity: 0.85; }
-.nav-tab:focus-visible, .btn-analyze:focus-visible, .btn-save:focus-visible, .btn-clear-all:focus-visible, .btn-save-result:focus-visible, .btn-del-hist:focus-visible, .popt:focus-visible, .sug-chip:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.nav-tab.active { color: var(--green); opacity: 1; border-bottom-color: var(--green); }
-
-/* PAGES */
-.page { display: none; }
-.page.active { display: block; }
-
-/* HEADER */
-header { position: relative; padding: 24px 20px 16px; text-align: center; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(var(--green-rgb),0.04) 0%, transparent 100%); }
-.logo-line { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.logo-x { font-family: 'DM Sans', sans-serif; font-size: 18px; color: var(--muted); }
-.ba-mini-logo { display: flex; align-items: center; gap: 7px; }
-.ba-mini-icon { width: 26px; height: 26px; border-radius: 7px; background: #0c6b5e; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-.ba-mini-text { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; color: var(--text-strong); letter-spacing: 0.3px; white-space: nowrap; }
-h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(38px, 9vw, 56px); letter-spacing: 4px; color: var(--text-strong); line-height: 1; }
-h1 span { color: var(--green); text-shadow: 0 0 28px rgba(var(--green-rgb),0.5); }
-.subtitle { margin-top: 6px; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
-
-/* TROCA DE TEMA */
-.theme-toggle { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, color 0.2s; z-index: 200; }
-.theme-toggle:hover, .theme-toggle[aria-expanded="true"] { border-color: var(--green); color: var(--green); }
-.theme-menu { position: absolute; top: 56px; right: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 176px; box-shadow: 0 14px 32px rgba(0,0,0,0.35); opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s; z-index: 200; text-align: left; }
-.theme-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
-.theme-option { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; background: transparent; border: none; border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; text-align: left; }
-.theme-option:hover { background: var(--surface2); }
-.theme-option.active { color: var(--green); font-weight: 600; }
-.theme-swatch { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--border); }
-.theme-swatch-dark { background: linear-gradient(135deg, #05080f 50%, #00e676 50%); }
-.theme-swatch-berger { background: linear-gradient(135deg, #ffffff 50%, #0c6b5e 50%); }
-.theme-check { margin-left: auto; width: 14px; height: 14px; color: var(--green); flex-shrink: 0; visibility: hidden; }
-.theme-option.active .theme-check { visibility: visible; }
-
-/* MAIN */
-main { max-width: 820px; margin: 0 auto; padding: 16px 12px; position: relative; z-index: 1; }
-
-/* BET ANALYZER EMBUTIDO */
-.ba-wrap { max-width: 820px; margin: 0 auto; padding: 10px 8px 0; display: flex; justify-content: center; }
-.ba-frame { width: 100%; max-width: 460px; height: 760px; max-height: calc(100vh - 90px); min-height: 520px; border: 1px solid var(--border); border-radius: 16px; background: #080c10; display: block; box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
-@media (max-width: 700px) { .ba-wrap { padding: 6px 4px 0; } .ba-frame { max-width: 100%; height: calc(100vh - 56px); max-height: none; border-radius: 12px; } }
-
-/* CALCULADORA ODDS & EV */
-.calc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.calc-result-box { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 13px 16px; font-size: 13px; font-weight: 600; color: var(--text); }
-.calc-result-box span:last-child { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--muted); }
-.calc-result-box span:last-child.pos { color: var(--green); }
-.calc-result-box span:last-child.neg { color: var(--red); }
-.calc-result-box-accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.calc-result-box-accent span:first-child { color: var(--on-accent); }
-.calc-result-box-accent span:last-child { color: var(--on-accent) !important; }
-
-/* TEAMS */
-.teams-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-bottom: 12px; }
-.vs-badge { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--muted); letter-spacing: 2px; }
-.team-input-wrap { display: flex; flex-direction: column; gap: 5px; }
-.team-input-wrap label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.team-input-wrap input[type="text"] { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text-strong); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.team-input-wrap input[type="text"]:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(var(--green-rgb),0.1); }
-
-/* SECTIONS */
-.section { margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; animation: fadeUp 0.4s ease both; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-.section-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); }
-.section-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.si-green { background: rgba(var(--green-rgb),0.15); color: var(--green); }
-.si-blue  { background: rgba(var(--accent-rgb),0.15); color: var(--accent); }
-.si-red   { background: rgba(var(--red-rgb),0.15);  color: var(--red); }
-.section-title { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.section-badge { margin-left: auto; font-size: 9px; padding: 2px 7px; border-radius: 20px; background: var(--green-dim); color: var(--green); letter-spacing: 1px; font-weight: 600; }
-
-/* INPUTS */
-.inputs-grid { display: grid; grid-template-columns: 1fr 1fr; }
-.inputs-column { padding: 10px 10px; }
-.inputs-column:first-child { border-right: 1px solid var(--border); }
-.col-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: block; }
-.num-inputs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-.num-inputs input { width: 100%; height: 36px; background: rgba(var(--ink-rgb),0.06); border: 1px solid rgba(var(--ink-rgb),0.1); border-radius: 7px; color: var(--text-strong); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; text-align: center; outline: none; transition: border-color 0.15s; -moz-appearance: textfield; padding: 0; }
-.num-inputs input::-webkit-outer-spin-button, .num-inputs input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.num-inputs input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(var(--green-rgb),0.12); }
-
-/* H2H */
-.h2h-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 10px; }
-.h2h-match { display: flex; flex-direction: column; align-items: center; gap: 2px; background: rgba(var(--ink-rgb),0.04); border: 1px solid rgba(var(--ink-rgb),0.08); border-radius: 7px; padding: 4px 2px; }
-.h2h-match .mlabel { font-size: 7px; letter-spacing: 0; color: var(--muted); text-transform: uppercase; line-height: 1; }
-.h2h-match input { width: 100%; height: 26px; background: rgba(var(--ink-rgb),0.06); border: 1px solid rgba(var(--ink-rgb),0.1); border-radius: 5px; color: var(--text-strong); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; outline: none; -moz-appearance: textfield; transition: border-color 0.15s; padding: 0; }
-.h2h-match input::-webkit-outer-spin-button, .h2h-match input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.h2h-match input:focus { border-color: var(--green); }
-.h2h-match .sep { font-size: 7px; color: var(--muted); line-height: 1; }
-
-/* BUTTONS */
-.btn-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin: 12px 0; }
-.btn-analyze { display: block; width: 100%; padding: 10px 12px; background: var(--green); color: var(--on-accent); font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 3px; border: none; border-radius: 10px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 3px 14px rgba(var(--green-rgb),0.25); position: relative; overflow: hidden; }
-.btn-analyze::after { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%); transform: translateX(-100%); transition: transform 0.4s; }
-.btn-analyze:hover::after { transform: translateX(100%); }
-.btn-analyze:hover { transform: translateY(-1px); }
-.btn-analyze:active { transform: translateY(0); }
-.btn-save { padding: 10px 14px; background: var(--surface2); color: var(--green); font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; border: 1px solid rgba(var(--green-rgb),0.3); border-radius: 10px; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
-.btn-save:hover { background: var(--green-dim); }
-.btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-clear-nums { padding: 10px 14px; background: var(--surface2); color: var(--red); font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; border: 1px solid rgba(var(--red-rgb),0.3); border-radius: 10px; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
-.btn-clear-nums:hover { background: rgba(var(--red-rgb),0.12); }
-.btn-clear-nums:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-
-/* TOAST */
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: var(--on-accent); font-weight: 600; font-size: 13px; padding: 12px 24px; border-radius: 40px; z-index: 999; transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); pointer-events: none; white-space: nowrap; }
-.toast.show { transform: translateX(-50%) translateY(0); }
-
-/* RESULTADO */
-#resultado { display: none; animation: fadeUp 0.5s ease both; }
-.result-header { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px 8px; text-align: center; }
-.result-team { flex: 1; }
-.result-team-name { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--text-strong); }
-.result-vs { font-family: 'Bebas Neue', sans-serif; font-size: 12px; color: var(--muted); }
-.stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 0 12px 10px; }
-.stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 6px; text-align: center; }
-.stat-label { font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-.stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0; line-height: 1; }
-.stat-value.green { color: var(--green); } .stat-value.yellow { color: var(--yellow); } .stat-value.red { color: var(--red); } .stat-value.blue { color: var(--accent); }
-.score-section { padding: 0 12px 10px; }
-.score-section-title { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
-.top-placares { display: flex; flex-direction: column; gap: 4px; }
-.placar-row { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; gap: 6px; }
-.placar-row:first-child { border-color: rgba(var(--green-rgb),0.3); background: rgba(var(--green-rgb),0.05); }
-.placar-rank { font-size: 9px; color: var(--muted); width: 12px; font-weight: 600; flex-shrink: 0; }
-.placar-row:first-child .placar-rank { color: var(--green); }
-.placar-score { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--text-strong); flex-shrink: 0; }
-.placar-prob-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.placar-prob-fill { height: 100%; background: var(--green); border-radius: 2px; }
-.placar-row:nth-child(2) .placar-prob-fill { background: var(--accent); }
-.placar-row:nth-child(3) .placar-prob-fill { background: var(--muted); }
-.placar-pct { font-size: 11px; font-weight: 600; color: var(--text); min-width: 34px; text-align: right; flex-shrink: 0; }
-.win-probs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 0 12px 10px; }
-.win-cell { background: var(--surface2); padding: 8px 4px; text-align: center; }
-.win-cell-label { font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
-.win-cell-value { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--text-strong); }
-.win-cell.highlight .win-cell-value { color: var(--green); }
-.odd-result-row { display: flex; align-items: center; gap: 10px; margin: 0 12px 10px; background: var(--surface2); border: 1px solid rgba(var(--yellow-rgb),0.2); border-radius: 10px; padding: 10px 14px; }
-.odd-result-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
-.odd-result-input { width: 80px; height: 32px; background: var(--bg); border: 1px solid rgba(var(--yellow-rgb),0.35); border-radius: 8px; color: var(--yellow); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; text-align: center; outline: none; -moz-appearance: textfield; padding: 0 6px; transition: border-color 0.15s; }
-.odd-result-input::-webkit-outer-spin-button, .odd-result-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.odd-result-input:focus { border-color: var(--yellow); box-shadow: 0 0 0 2px rgba(var(--yellow-rgb),0.1); }
-.odd-result-hint { font-size: 11px; font-weight: 600; margin-left: auto; }
-.ev-pos { color: var(--green); }
-.ev-neg { color: var(--red); }
-.ia-block { margin: 0 12px 12px; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; border: 1px solid transparent; }
-.ia-block.forte { background: rgba(var(--green-rgb),0.08); border-color: rgba(var(--green-rgb),0.25); }
-.ia-block.moderada { background: rgba(var(--yellow-rgb),0.08); border-color: rgba(var(--yellow-rgb),0.25); }
-.ia-block.evitar { background: rgba(var(--red-rgb),0.08); border-color: rgba(var(--red-rgb),0.25); }
-.ia-text h3 { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; line-height: 1; }
-.ia-block.forte h3 { color: var(--green); } .ia-block.moderada h3 { color: var(--yellow); } .ia-block.evitar h3 { color: var(--red); }
-.ia-text p { font-size: 10px; color: var(--muted); margin-top: 2px; }
-
-/* HISTÓRICO PAGE */
-#page-historico { max-width: 820px; margin: 0 auto; padding: 14px 12px; position: relative; z-index: 1; }
-.hist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.hist-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--text-strong); }
-.hist-count { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
-.btn-clear-all { padding: 6px 12px; background: transparent; border: 1px solid rgba(var(--red-rgb),0.3); color: var(--red); border-radius: 7px; font-size: 9px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
-.btn-clear-all:hover { background: rgba(var(--red-rgb),0.1); }
-
-/* GLOBAL STATS */
-.global-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 12px; }
-.global-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 8px 6px; text-align: center; }
-.global-stat .glabel { font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-.global-stat .gvalue { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text-strong); }
-.global-stat .gvalue.green { color: var(--green); }
-
-/* HIST EMPTY */
-.hist-empty { text-align: center; padding: 50px 20px; color: var(--muted); }
-.hist-empty-icon { font-size: 36px; margin-bottom: 10px; }
-.hist-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--muted); margin-bottom: 6px; }
-.hist-empty-desc { font-size: 12px; }
-
-/* HIST CARD */
-.hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; overflow: hidden; animation: fadeUp 0.3s ease both; transition: border-color 0.2s; }
-.hist-card:hover { border-color: rgba(var(--ink-rgb),0.13); }
-.hist-card-header { display: flex; align-items: center; padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); gap: 8px; cursor: pointer; }
-.hist-card-matchup { flex: 1; min-width: 0; }
-.hist-card-teams { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px; color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hist-card-date { font-size: 9px; color: var(--muted); margin-top: 1px; }
-.hist-card-badge { padding: 3px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
-.hist-card-badge.forte { background: var(--green-dim); color: var(--green); }
-.hist-card-badge.moderada { background: rgba(var(--yellow-rgb),0.12); color: var(--yellow); }
-.hist-card-badge.evitar { background: rgba(var(--red-rgb),0.12); color: var(--red); }
-.hist-card-toggle { color: var(--muted); font-size: 11px; transition: transform 0.2s; margin-left: 4px; flex-shrink: 0; }
-.hist-card.expanded .hist-card-toggle { transform: rotate(180deg); }
-.hist-card-body { display: none; padding: 10px 12px; }
-.hist-card.expanded .hist-card-body { display: block; }
-
-/* HIST BODY ELEMENTS */
-.hist-mini-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin-bottom: 8px; }
-.hist-mini-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 6px; text-align: center; }
-.hist-mini-stat .hlabel { font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
-.hist-mini-stat .hvalue { font-family: 'Bebas Neue', sans-serif; font-size: 18px; }
-.hist-mini-stat .hvalue.green { color: var(--green); } .hist-mini-stat .hvalue.yellow { color: var(--yellow); } .hist-mini-stat .hvalue.red { color: var(--red); } .hist-mini-stat .hvalue.blue { color: var(--accent); }
-.hist-placares { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
-.hist-placar-row { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; }
-.hist-placar-row:first-child { border-color: rgba(var(--green-rgb),0.25); }
-.hist-placar-score { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px; flex: 1; }
-.hist-win-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
-.hist-win-cell { background: var(--surface2); padding: 7px 4px; text-align: center; }
-.hist-win-cell .wlabel { font-size: 7px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hist-win-cell .wvalue { font-family: 'Bebas Neue', sans-serif; font-size: 16px; color: var(--text-strong); }
-.hist-win-cell.best .wvalue { color: var(--green); }
-
-/* RESULTADO REAL */
-.hist-result-input { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.hist-result-input label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
-.score-inputs { display: flex; align-items: center; gap: 5px; }
-.score-inputs input { width: 36px; height: 30px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text-strong); font-size: 14px; font-weight: 700; text-align: center; outline: none; -moz-appearance: textfield; transition: border-color 0.15s; }
-.score-inputs input:focus { border-color: var(--green); }
-.score-inputs input::-webkit-outer-spin-button, .score-inputs input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.score-sep { font-family: 'Bebas Neue', sans-serif; font-size: 14px; color: var(--muted); }
-.btn-save-result { margin-left: auto; padding: 7px 14px; background: var(--green); border: none; border-radius: 7px; color: var(--on-accent); font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s; }
-.btn-save-result:hover { opacity: 0.85; }
-.hist-result-saved { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 8px; flex-wrap: wrap; }
-.acerto-badge { padding: 2px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-.acerto-badge.hit { background: var(--green-dim); color: var(--green); }
-.acerto-badge.miss { background: rgba(var(--red-rgb),0.12); color: var(--red); }
-.hist-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.btn-del-hist { padding: 5px 10px; background: rgba(var(--red-rgb),0.15); border: 1px solid rgba(var(--red-rgb),0.4); border-radius: 5px; color: var(--red); font-size: 9px; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
-.btn-del-hist:hover { background: rgba(var(--red-rgb),0.25); }
-
-/* PALPITES FORM */
-.palpites-form { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px; margin-bottom: 8px; }
-.palpites-title { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--green); font-weight: 800; margin-bottom: 7px; }
-.palpite-nota { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 7px 10px; outline: none; resize: none; line-height: 1.45; transition: border-color 0.15s; }
-.palpite-nota:focus { border-color: var(--green); }
-.sugestoes-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.sug-chip { padding: 3px 8px; background: rgba(var(--accent-rgb),0.1); border: 1px solid rgba(var(--accent-rgb),0.25); border-radius: 20px; color: var(--accent); font-size: 10px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-.sug-chip:hover { background: rgba(var(--accent-rgb),0.2); }
-.palpite-divider { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--border); padding-top: 7px; margin: 7px 0 6px; }
-.odd-line { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
-.odd-line:last-of-type { border-bottom: none; }
-.odd-line-label { font-size: 11px; color: var(--text); }
-.mercado-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; flex-wrap: wrap; }
-.mercado-opts { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
-.popt { padding: 3px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.popt:hover { border-color: var(--green); color: var(--text); }
-.popt.selected { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-.odd-input { width: 58px; height: 28px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--yellow); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; text-align: center; outline: none; -moz-appearance: textfield; padding: 0 4px; transition: border-color 0.15s; flex-shrink: 0; }
-.odd-input::-webkit-outer-spin-button, .odd-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.odd-input:focus { border-color: var(--yellow); }
-.odd-input::placeholder { color: var(--muted); font-weight: 400; font-size: 10px; }
-.nota-salva { font-size: 11px; color: var(--muted); background: var(--bg); border-left: 2px solid var(--accent); border-radius: 0 5px 5px 0; padding: 5px 9px; margin-top: 5px; line-height: 1.4; }
-
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-@media (max-width: 700px) {
-  .inputs-grid { grid-template-columns: 1fr; }
-  .inputs-column:first-child { border-right: 0; border-bottom: 1px solid var(--border); }
-  .btn-row { grid-template-columns: 1fr; }
-  .btn-save { width: 100%; }
-  .btn-clear-nums { width: 100%; }
-  .odd-result-row { flex-wrap: wrap; }
-  .odd-result-hint { margin-left: 0; width: 100%; }
-  .hist-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-}
-
-@media (max-width: 480px) {
-  .teams-row { grid-template-columns: 1fr; }
-  .vs-badge { display: none; }
-  .global-stats { grid-template-columns: repeat(2,1fr); }
-  .stats-grid { grid-template-columns: 1fr; }
-  .h2h-grid { grid-template-columns: repeat(3, 1fr); }
-  .logo-x { display: none; }
-  .ba-mini-text { font-size: 13px; }
-}
+:root{color-scheme:light;--bg:#ffffff;--card:#f4faf6;--ink:#14261f;--mut:#5a7068;--line:#cfe2d7;--gain:#0a7d5e;--gainbg:#e0f4ec;--loss:#c23b2a;--lossbg:#fbe5e1;--lock:#a86a00;--lockbg:#fbefd6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px}
+h1{color:#0a6b50;font-size:20px;font-weight:600;margin:4px 0 2px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.status{border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid}
+.status.ok{background:var(--gainbg);border-color:var(--gain);color:var(--gain)}
+.status.lk{background:var(--lockbg);border-color:var(--lock);color:var(--lock)}
+.status b{display:block;font-size:20px}
+.status span{font-size:14px;color:var(--ink)}
+.pnl{font:600 40px/1.1 "IBM Plex Mono",ui-monospace,monospace;margin:2px 0}
+.pos{color:var(--gain)}.neg{color:var(--loss)}
+.row{display:flex;gap:10px}
+.slots{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+.slot{min-width:0;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;min-height:0;font-size:14px;line-height:1.3}
+.slot small{color:var(--mut);display:block;font-size:12px}
+.slot.g{border:1px solid var(--gain);background:var(--gainbg)}
+.slot.l{border:1px solid var(--loss);background:var(--lossbg)}
+.slot.next{border-style:solid;border-color:var(--gain)}
+.slot strong{font:600 15px "IBM Plex Mono",monospace}
+button{font:600 16px "IBM Plex Sans",sans-serif;border:0;border-radius:10px;padding:16px 10px;cursor:pointer;flex:1;color:#fff}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.bg{background:#0b8a68}.bl{background:#c23b2a}
+button:disabled{opacity:.35;cursor:not-allowed}
+.sec{background:transparent;color:var(--mut);border:1px solid var(--line);padding:10px;font-size:14px;font-weight:500}
+label{display:block;font-size:13px;color:var(--mut)}
+input{width:100%;box-sizing:border-box;font:500 15px "IBM Plex Mono",monospace;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+summary{cursor:pointer;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+#hist td{white-space:nowrap}
+td:last-child,th:last-child{text-align:right;font-family:"IBM Plex Mono",monospace}
+#hist tr{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+details.card summary{list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);transition:transform .15s;margin-right:4px}
+details[open].card summary::after{transform:rotate(-135deg)}
+.cfgs{margin-top:10px}
+label.prm{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);color:var(--ink);font-size:15px}
+.prm small{display:block;color:var(--mut);font-size:12px}
+.prm input{width:112px;flex:none;text-align:right;font-size:16px;padding:9px 10px}
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:6px}
+.tile{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.tile small{display:block;color:var(--mut);font-size:12px}
+.tile b{font:600 17px "IBM Plex Mono",monospace}
+.bkv{margin-left:auto;margin-right:10px;font:600 16px "IBM Plex Mono",monospace}
+#bk .calc{margin-top:10px}
+.bar{position:relative;height:12px;background:var(--line);border-radius:6px;margin:12px 0 30px}
+.bar i{display:block;height:100%;border-radius:6px;background:var(--gain);min-width:0}
+.bar i.bad{background:var(--loss)}
+.bar u{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1px;background:var(--ink);border-radius:2px}
+.bar u::after{content:attr(data-l);position:absolute;top:24px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--mut);white-space:nowrap}
+.chip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px}
+.chip.ok{background:var(--gainbg);color:var(--gain)}.chip.no{background:var(--lossbg);color:var(--loss)}
+.top{padding:12px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pill{flex:none;background:transparent;color:var(--gain);border:2px solid var(--gain);border-radius:999px;padding:6px 14px;font:600 15px "IBM Plex Mono",monospace}
+.tabs{display:flex;position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--gain);margin:0 -16px 12px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:transparent;color:var(--mut);border-radius:0;padding:6px 4px 5px;font-size:12px;font-weight:500;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--gain);border-bottom-color:var(--gain);background:var(--gainbg)}
+.hr{display:flex;align-items:center;gap:8px;min-width:0}
+.kebab{flex:none;width:42px;height:42px;padding:0;border-radius:50%;background:transparent;border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center}
+.panel{width:100%;max-width:480px;box-sizing:border-box;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:88%;overflow-y:auto}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:10px}
+.pl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pl .tile{text-align:center;padding:6px 2px;background:var(--card)}
+.pl .tile small{font-size:11px}
+.pl b{display:block}
+.pl .big{font:600 15px "IBM Plex Mono",monospace;color:var(--ink);margin:0}
+.pl .val{font:600 12px "IBM Plex Mono",monospace}
+.dock{margin:0 0 12px}
+.dock .pl{gap:6px}
+main{padding-bottom:24px}
+[hidden]{display:none!important}
+.del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
+.hint{font-size:13px;color:var(--mut);margin:8px 0 0}
 </style>
 </head>
 <body>
-
-<header>
-  <button type="button" class="theme-toggle" id="themeToggle" aria-haspopup="true" aria-expanded="false" aria-label="Mudar tema de cores" onclick="toggleThemeMenu()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 1 0-20c5 0 9 3.5 9 8 0 2.5-2 4-4 4h-2a2 2 0 0 0-1 3.5c.3.5.3 1 0 1.5-.5.7-1.3 1-2 1z"/><circle cx="6.5" cy="11.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.5" cy="11.5" r="1.2" fill="currentColor" stroke="none"/></svg>
-  </button>
-  <div class="theme-menu" id="themeMenu" role="menu" aria-label="Temas de cores">
-    <button type="button" class="theme-option" role="menuitem" data-theme-value="dark" onclick="setTheme('dark')">
-      <span class="theme-swatch theme-swatch-dark"></span>
-      <span>Escuro</span>
-      <svg class="theme-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    </button>
-    <button type="button" class="theme-option" role="menuitem" data-theme-value="berger" onclick="setTheme('berger')">
-      <span class="theme-swatch theme-swatch-berger"></span>
-      <span>Berger</span>
-      <svg class="theme-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    </button>
-  </div>
-  <div class="logo-line">
-    <h1>x<span>Gols</span></h1>
-    <span class="logo-x">×</span>
-    <div class="ba-mini-logo">
-      <span class="ba-mini-icon">🟨</span>
-      <span class="ba-mini-text">Bet Analyzer</span>
-    </div>
-  </div>
-  <p class="subtitle">Análise Estatística Premium · Modelo Poisson</p>
-</header>
-
-<div class="nav-tabs" role="tablist" aria-label="Navegação principal">
-  <button type="button" class="nav-tab active" role="tab" aria-selected="true" aria-controls="page-analise" onclick="switchTab('analise')">Análise</button>
-  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="page-historico" onclick="switchTab('historico')">Histórico</button>
-  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="page-calculadora" onclick="switchTab('calculadora')">Odds &amp; EV</button>
-  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="page-cartoes" onclick="switchTab('cartoes')">Cartões</button>
-</div>
-
-<!-- ─── ANÁLISE ─── -->
-<div id="page-analise" class="page active">
 <main>
-  <div class="teams-row">
-    <div class="team-input-wrap">
-      <label>Time da Casa</label>
-      <input type="text" id="time1" placeholder="Time da Casa">
-    </div>
-    <div class="vs-badge">VS</div>
-    <div class="team-input-wrap" style="text-align:right">
-      <label>Time Visitante</label>
-      <input type="text" id="time2" placeholder="Time Visitante">
-    </div>
+<header class="top"><h1>TraderControl</h1><div class="hr"><button class="pill" id="pill" data-go="metrica" aria-label="Ver banca"></button><button class="kebab" id="kebab" aria-label="Configurar parâmetros do plano"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header>
+<div class="dock"><div class="pl" id="plano"></div></div>
+<nav class="tabs" role="tablist">
+  <button class="tab on" data-tab="entrada" role="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Entrada</button>
+  <button class="tab" data-tab="historico" role="tab"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></svg>Histórico</button>
+  <button class="tab" data-tab="metrica" role="tab"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16v-4M12 16V8M16 16v-6"/></svg>Métrica</button>
+</nav>
+<section id="t-entrada">
+<div class="card">
+  <div class="sub" style="margin:0">Resultado do dia</div>
+  <div class="pnl" id="pnl"></div>
+  <div class="slots" id="slots"></div>
+</div>
+<div id="status"></div>
+<div class="row" style="margin-bottom:10px">
+  <button class="bg" id="bg">Registrar GAIN</button>
+  <button class="bl" id="bl">Registrar LOSS</button>
+</div>
+<div class="row" style="margin-bottom:12px">
+  <button class="sec" id="undo">Desfazer último</button>
+  <button class="sec" id="reset">Zerar o dia</button>
+</div>
+</section>
+<section id="t-historico" hidden>
+<div class="card">
+  <strong>Últimos dias</strong>
+  <table id="hist"><tbody></tbody></table>
+</div>
+</section>
+<section id="t-metrica" hidden>
+<div class="card" id="tx"></div>
+<div class="card" id="bk">
+  <div style="display:flex;justify-content:space-between;align-items:center"><strong>Banca</strong><span class="bkv" id="bkv" style="margin:0"></span></div>
+  <div class="cfgs">
+    <label class="prm"><span>Banca inicial<small>R$</small></span><input id="bkin" type="number" inputmode="decimal" min="0" step="any" placeholder="0,00"></label>
   </div>
-
-  <div class="section" style="animation-delay:.05s">
-    <div class="section-header">
-      <span class="section-icon si-green">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
-      </span>
-      <span class="section-title">Gols Feitos</span>
-      <span class="section-badge">10 jogos</span>
-    </div>
-    <div class="inputs-grid">
-      <div class="inputs-column">
-        <span class="col-label" id="col-t1f">Time 1</span>
-        <div class="num-inputs" id="t1f"></div>
-      </div>
-      <div class="inputs-column">
-        <span class="col-label" id="col-t2f">Time 2</span>
-        <div class="num-inputs" id="t2f"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section" style="animation-delay:.1s">
-    <div class="section-header">
-      <span class="section-icon si-blue">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </span>
-      <span class="section-title">Gols Sofridos</span>
-      <span class="section-badge">10 jogos</span>
-    </div>
-    <div class="inputs-grid">
-      <div class="inputs-column">
-        <span class="col-label" id="col-t1s">Time 1</span>
-        <div class="num-inputs" id="t1s"></div>
-      </div>
-      <div class="inputs-column">
-        <span class="col-label" id="col-t2s">Time 2</span>
-        <div class="num-inputs" id="t2s"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section" style="animation-delay:.15s">
-    <div class="section-header">
-      <span class="section-icon si-red">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </span>
-      <span class="section-title">Head to Head</span>
-      <span class="section-badge">5 jogos</span>
-    </div>
-    <div class="h2h-grid" id="h2h"></div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn-analyze" onclick="calcular()">⚡ ANALISAR</button>
-    <button class="btn-clear-nums" onclick="limparNumeros()">🧹 LIMPAR</button>
-    <button class="btn-save" id="btn-save" onclick="salvarAnalise()" disabled>💾 SALVAR</button>
-  </div>
-
-  <div id="resultado">
-    <div class="section">
-      <div class="section-header">
-        <span class="section-icon">📊</span>
-        <span class="section-title">Resultado da Análise</span>
-      </div>
-      <div class="result-header">
-        <div class="result-team" style="text-align:right"><div class="result-team-name" id="rtime1">Time 1</div></div>
-        <div class="result-vs">VS</div>
-        <div class="result-team"><div class="result-team-name" id="rtime2">Time 2</div></div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">xG Total</div><div class="stat-value blue" id="r-xg">—</div></div>
-        <div class="stat-card"><div class="stat-label">Over 2.5</div><div class="stat-value" id="r-over">—</div></div>
-        <div class="stat-card"><div class="stat-label">BTTS</div><div class="stat-value" id="r-btts">—</div></div>
-      </div>
-      <div class="score-section">
-        <div class="score-section-title">🎯 Top 3 Placares Prováveis</div>
-        <div class="top-placares" id="r-placares"></div>
-      </div>
-      <div class="win-probs">
-        <div class="win-cell" id="wc1"><div class="win-cell-label" id="wl1">Time 1</div><div class="win-cell-value" id="wv1">—</div></div>
-        <div class="win-cell"><div class="win-cell-label">Empate</div><div class="win-cell-value" id="wv-emp">—</div></div>
-        <div class="win-cell" id="wc2"><div class="win-cell-label" id="wl2">Time 2</div><div class="win-cell-value" id="wv2">—</div></div>
-      </div>
-      <div class="odd-result-row">
-        <span class="odd-result-label">Minha ODD</span>
-        <input type="number" id="minha-odd" step="0.01" min="1" class="odd-result-input" placeholder="Ex: 1.85">
-        <span class="odd-result-hint" id="odd-hint"></span>
-      </div>
-      <div class="ia-block" id="ia-block">
-        <div class="ia-text"><h3 id="ia-decisao">—</h3><p id="ia-desc">—</p></div>
-      </div>
-    </div>
-  </div>
+  <div class="calc" id="bkcalc"></div>
+</div>
+</section>
 </main>
-</div>
-
-<!-- ─── HISTÓRICO ─── -->
-<div id="page-historico" class="page">
-  <div class="hist-header">
-    <div>
-      <div class="hist-title">📁 Histórico</div>
-      <div class="hist-count" id="hist-count">0 análises salvas</div>
-    </div>
-    <button class="btn-clear-all" onclick="limparTudo()">🗑 Limpar tudo</button>
-  </div>
-  <div class="global-stats">
-    <div class="global-stat"><div class="glabel">Total</div><div class="gvalue" id="gs-total">0</div></div>
-    <div class="global-stat"><div class="glabel">Com Resultado</div><div class="gvalue" id="gs-com-res">0</div></div>
-    <div class="global-stat"><div class="glabel">Acertos Over</div><div class="gvalue green" id="gs-acertos">0</div></div>
-    <div class="global-stat"><div class="glabel">Taxa de Acerto</div><div class="gvalue green" id="gs-taxa">—</div></div>
-  </div>
-  <div id="hist-lista"></div>
-</div>
-
-<!-- ─── CALCULADORA DE ODDS & EV ─── -->
-<div id="page-calculadora" class="page">
-<main>
-  <div class="section" style="animation-delay:.05s">
-    <div class="section-header">
-      <span class="section-icon si-blue">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      </span>
-      <span class="section-title">1: Dados da Aposta</span>
-    </div>
-    <div style="padding:12px">
-      <div class="teams-row" style="margin-bottom:12px">
-        <div class="team-input-wrap">
-          <label>Time da Casa</label>
-          <input type="text" id="calc_time1">
-        </div>
-        <div class="vs-badge">VS</div>
-        <div class="team-input-wrap" style="text-align:right">
-          <label>Time de Fora</label>
-          <input type="text" id="calc_time2">
-        </div>
-      </div>
-      <div class="team-input-wrap">
-        <label>Palpite da Partida</label>
-        <input type="text" id="calc_palpite">
-      </div>
-    </div>
-  </div>
-
-  <div class="section" style="animation-delay:.1s">
-    <div class="section-header">
-      <span class="section-icon si-green">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-      </span>
-      <span class="section-title">2: Probabilidade e Odds</span>
-    </div>
-    <div style="padding:12px">
-      <div class="team-input-wrap" style="margin-bottom:10px">
-        <label>Probabilidade Estimada (%)</label>
-        <input type="number" id="calc_prob" step="0.1" min="0" max="100" oninput="atualizarCalculadora()">
-      </div>
-      <div class="calc-result-box calc-result-box-accent">
-        <span>Odd Decimal (Justa)</span>
-        <span id="calc_odd_justa">—</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="section" style="animation-delay:.15s">
-    <div class="section-header">
-      <span class="section-icon si-red">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      </span>
-      <span class="section-title">3: Valor Esperado (EV)</span>
-    </div>
-    <div style="padding:12px">
-      <div class="calc-two-col" style="margin-bottom:10px">
-        <div class="team-input-wrap">
-          <label>Odd Ref. (Pinnacle)</label>
-          <input type="number" id="calc_odd_ref" step="0.01" min="1" oninput="atualizarCalculadora()">
-        </div>
-        <div class="team-input-wrap">
-          <label>Odd Tomada (Casa)</label>
-          <input type="number" id="calc_odd_tomada" step="0.01" min="1" oninput="atualizarCalculadora()">
-        </div>
-      </div>
-      <div class="calc-result-box">
-        <span>Valor Esperado (EV)</span>
-        <span id="calc_ev">—</span>
-      </div>
-      <button class="btn-save" id="calc-btn-save" style="width:100%;margin-top:10px" onclick="salvarCalculadora()" disabled>💾 Salvar no Histórico</button>
-    </div>
-  </div>
-
-  <div class="hist-header" style="margin-top:14px">
-    <div>
-      <div class="hist-title">📁 Histórico Salvo</div>
-      <div class="hist-count" id="calc-hist-count">0 registros</div>
-    </div>
-    <button class="btn-clear-all" onclick="limparCalculadora()">🗑 Limpar Tudo</button>
-  </div>
-  <div id="calc-hist-lista"></div>
-</main>
-</div>
-
-<!-- ─── BET ANALYZER PRO MAX (embutido, isolado) ─── -->
-<div id="page-cartoes" class="page">
-  <div class="ba-wrap">
-    <iframe id="ba-frame" class="ba-frame" title="Bet Analyzer PRO MAX"></iframe>
+<div id="sheet" hidden style="position:fixed;inset:0;background:rgba(10,25,20,.5);display:flex;align-items:flex-end;justify-content:center;z-index:8">
+  <div class="panel" role="dialog" aria-label="Parâmetros do plano">
+    <div style="display:flex;justify-content:space-between;align-items:center"><strong style="font-size:18px">Parâmetros do plano</strong><button class="sec" data-close style="flex:none;padding:8px 14px">Fechar</button></div>
+    <div class="cfgs" id="cfg"></div>
+    <div class="calc" id="calc"></div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
+<div id="dlg" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9">
+<div class="card" style="max-width:340px;margin:0"><p id="dmsg" style="margin:0 0 14px"></p><div class="row"><button class="sec" id="dno">Cancelar</button><button class="bl" id="dyes">Apagar</button></div></div></div>
 <script>
-// ─── TABS ──────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => {
-    t.classList.remove('active');
-    t.setAttribute('aria-selected', 'false');
-  });
-  document.getElementById('page-' + tab).classList.add('active');
-  const idxMap = { analise: 0, historico: 1, calculadora: 2, cartoes: 3 };
-  const activeTab = document.querySelectorAll('.nav-tab')[idxMap[tab]];
-  activeTab.classList.add('active');
-  activeTab.setAttribute('aria-selected', 'true');
-  if (tab === 'historico') renderHistorico();
-  if (tab === 'calculadora') renderCalculadora();
-  if (tab === 'cartoes') carregarBetAnalyzer();
+var KEY="controlador-win-v1";
+var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2};
+var S={cfg:Object.assign({},DEF),days:{},banca:0};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+var cur=today();
+function brl(v){return (v<0?"-":"")+"R$ "+Math.abs(v).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}
+function val(pts){return pts*S.cfg.ponto*S.cfg.contratos}
+function ents(){return S.days[cur]||(S.days[cur]=[])}
+function pnl(e){return e.reduce(function(a,x){return a+(x.r==="gain"?val(S.cfg.gain):-val(S.cfg.loss))},0)}
+function lockState(){
+  var e=ents(),p=pnl(e);
+  if(e.some(function(x){return x.r==="gain"}))return "Meta alcançada. Ordens bloqueadas até amanhã.";
+  if(p<=-S.cfg.perdaMax)return "Perda máxima diária atingida. Ordens bloqueadas até amanhã.";
+  if(e.length>=S.cfg.tentativas)return "Limite de "+S.cfg.tentativas+" tentativas atingido. Ordens bloqueadas até amanhã.";
+  return null;
 }
-
-// ─── BET ANALYZER (carregamento sob demanda) ───
-const BA_SRC_B64 = "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9InB0LUJSIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAsIG1heGltdW0tc2NhbGU9MS4wLCB1c2VyLXNjYWxhYmxlPW5vIj4KPG1ldGEgbmFtZT0ibW9iaWxlLXdlYi1hcHAtY2FwYWJsZSIgY29udGVudD0ieWVzIj4KPG1ldGEgbmFtZT0iYXBwbGUtbW9iaWxlLXdlYi1hcHAtY2FwYWJsZSIgY29udGVudD0ieWVzIj4KPG1ldGEgbmFtZT0iYXBwbGUtbW9iaWxlLXdlYi1hcHAtc3RhdHVzLWJhci1zdHlsZSIgY29udGVudD0iYmxhY2stdHJhbnNsdWNlbnQiPgo8dGl0bGU+QmV0IEFuYWx5emVyIFBSTyBNQVg8L3RpdGxlPgo8c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L25wbS9jaGFydC5qcyI+PC9zY3JpcHQ+CjxsaW5rIGhyZWY9Imh0dHBzOi8vZm9udHMuZ29vZ2xlYXBpcy5jb20vY3NzMj9mYW1pbHk9U3luZTp3Z2h0QDQwMDs2MDA7NzAwOzgwMCZmYW1pbHk9SUJNK1BsZXgrTW9ubzp3Z2h0QDQwMDs1MDAmZGlzcGxheT1zd2FwIiByZWw9InN0eWxlc2hlZXQiPgo8c3R5bGU+Cjpyb290IHsKICAtLWJnOiAjZWVmM2YxOwogIC0tc3VyZmFjZTogI2ZmZmZmZjsKICAtLXN1cmZhY2UyOiAjZTdmMGVjOwogIC0tYm9yZGVyOiByZ2JhKDI4LDQzLDM5LDAuMTIpOwogIC0tYWNjZW50OiAjMGM2YjVlOwogIC0tYmx1ZTogIzBlNzQ5MDsKICAtLXB1cnBsZTogIzdjNWNiZjsKICAtLXdhcm46ICNiNDUzMDk7CiAgLS1kYW5nZXI6ICNkYzI2MjY7CiAgLS10ZXh0OiAjMWMyYjI3OwogIC0tbXV0ZWQ6ICM0ZjZiNjU7CiAgLS1mb250OiAnU3luZScsIHNhbnMtc2VyaWY7CiAgLS1tb25vOiAnSUJNIFBsZXggTW9ubycsIG1vbm9zcGFjZTsKICAtLW5hdi1oOiA2NHB4OwogIC0taGVhZGVyLWg6IDU2cHg7Cn0KCiosICo6OmJlZm9yZSwgKjo6YWZ0ZXIgeyBib3gtc2l6aW5nOiBib3JkZXItYm94OyBtYXJnaW46IDA7IHBhZGRpbmc6IDA7IC13ZWJraXQtdGFwLWhpZ2hsaWdodC1jb2xvcjogdHJhbnNwYXJlbnQ7IH0KCmh0bWwsIGJvZHkgewogIGhlaWdodDogMTAwJTsKICBiYWNrZ3JvdW5kOiB2YXIoLS1iZyk7CiAgY29sb3I6IHZhcigtLXRleHQpOwogIGZvbnQtZmFtaWx5OiB2YXIoLS1mb250KTsKICBvdmVyZmxvdzogaGlkZGVuOwp9Cgpib2R5OjpiZWZvcmUgewogIGNvbnRlbnQ6ICcnOwogIHBvc2l0aW9uOiBmaXhlZDsKICBpbnNldDogMDsKICBiYWNrZ3JvdW5kLWltYWdlOgogICAgbGluZWFyLWdyYWRpZW50KHJnYmEoMTIsMTA3LDk0LDAuMDI1KSAxcHgsIHRyYW5zcGFyZW50IDFweCksCiAgICBsaW5lYXItZ3JhZGllbnQoOTBkZWcsIHJnYmEoMTIsMTA3LDk0LDAuMDI1KSAxcHgsIHRyYW5zcGFyZW50IDFweCk7CiAgYmFja2dyb3VuZC1zaXplOiAzMnB4IDMycHg7CiAgcG9pbnRlci1ldmVudHM6IG5vbmU7CiAgei1pbmRleDogMDsKfQoKLyog4pSA4pSAIEFQUCBTSEVMTCDilIDilIAgKi8KLmFwcCB7CiAgcG9zaXRpb246IHJlbGF0aXZlOwogIHotaW5kZXg6IDE7CiAgZGlzcGxheTogZmxleDsKICBmbGV4LWRpcmVjdGlvbjogY29sdW1uOwogIGhlaWdodDogMTAwdmg7CiAgaGVpZ2h0OiAxMDBkdmg7Cn0KCi8qIOKUgOKUgCBIRUFERVIg4pSA4pSAICovCi5hcHAtaGVhZGVyIHsKICBoZWlnaHQ6IHZhcigtLWhlYWRlci1oKTsKICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlKTsKICBib3JkZXItYm90dG9tOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKICBkaXNwbGF5OiBmbGV4OwogIGFsaWduLWl0ZW1zOiBjZW50ZXI7CiAganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOwogIHBhZGRpbmc6IDAgMTZweDsKICBmbGV4LXNocmluazogMDsKfQoKLmxvZ28geyBkaXNwbGF5OiBmbGV4OyBhbGlnbi1pdGVtczogY2VudGVyOyBnYXA6IDEwcHg7IH0KCi5sb2dvLWljb24gewogIHdpZHRoOiAzMnB4OyBoZWlnaHQ6IDMycHg7CiAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50KTsKICBib3JkZXItcmFkaXVzOiA4cHg7CiAgZGlzcGxheTogZmxleDsgYWxpZ24taXRlbXM6IGNlbnRlcjsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7CiAgZm9udC1zaXplOiAxNnB4Owp9CgoubG9nby10ZXh0IHsgZm9udC1zaXplOiAxN3B4OyBmb250LXdlaWdodDogODAwOyBjb2xvcjogdmFyKC0tdGV4dCk7IH0KLmxvZ28tc3ViIHsgZm9udC1zaXplOiA5cHg7IGZvbnQtd2VpZ2h0OiA2MDA7IGxldHRlci1zcGFjaW5nOiAyLjVweDsgY29sb3I6IHZhcigtLWFjY2VudCk7IGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsgfQoKLmhlYWRlci1iYWRnZSB7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIGZvbnQtc2l6ZTogMTBweDsKICBjb2xvcjogdmFyKC0tbXV0ZWQpOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgcGFkZGluZzogNHB4IDEwcHg7CiAgYm9yZGVyLXJhZGl1czogMjBweDsKfQoKLyog4pSA4pSAIFNDUk9MTCBDT05URU5UIOKUgOKUgCAqLwouYXBwLWNvbnRlbnQgewogIGZsZXg6IDE7CiAgb3ZlcmZsb3cteTogYXV0bzsKICBvdmVyZmxvdy14OiBoaWRkZW47CiAgLXdlYmtpdC1vdmVyZmxvdy1zY3JvbGxpbmc6IHRvdWNoOwogIHBhZGRpbmc6IDE2cHggMTRweCBjYWxjKHZhcigtLW5hdi1oKSArIDE2cHgpOwp9CgovKiDilIDilIAgQk9UVE9NIE5BViDilIDilIAgKi8KLmJvdHRvbS1uYXYgewogIGhlaWdodDogdmFyKC0tbmF2LWgpOwogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UpOwogIGJvcmRlci10b3A6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogIGRpc3BsYXk6IGZsZXg7CiAgZmxleC1zaHJpbms6IDA7CiAgcG9zaXRpb246IHJlbGF0aXZlOwogIHotaW5kZXg6IDEwOwp9CgoubmF2LWl0ZW0gewogIGZsZXg6IDE7CiAgZGlzcGxheTogZmxleDsKICBmbGV4LWRpcmVjdGlvbjogY29sdW1uOwogIGFsaWduLWl0ZW1zOiBjZW50ZXI7CiAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7CiAgZ2FwOiAzcHg7CiAgY3Vyc29yOiBwb2ludGVyOwogIHRyYW5zaXRpb246IG9wYWNpdHkgMC4yczsKICAtd2Via2l0LXVzZXItc2VsZWN0OiBub25lOwogIHVzZXItc2VsZWN0OiBub25lOwogIHBhZGRpbmctYm90dG9tOiBlbnYoc2FmZS1hcmVhLWluc2V0LWJvdHRvbSwgMCk7Cn0KCi5uYXYtaXRlbS5hY3RpdmUgLm5hdi1pY29uIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KLm5hdi1pdGVtLmFjdGl2ZSAubmF2LWxhYmVsIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KCi5uYXYtaWNvbiB7IGZvbnQtc2l6ZTogMjBweDsgY29sb3I6IHZhcigtLW11dGVkKTsgdHJhbnNpdGlvbjogY29sb3IgMC4yczsgfQoubmF2LWxhYmVsIHsgZm9udC1zaXplOiAxMHB4OyBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7IGNvbG9yOiB2YXIoLS1tdXRlZCk7IGxldHRlci1zcGFjaW5nOiAwLjVweDsgdHJhbnNpdGlvbjogY29sb3IgMC4yczsgfQoKLyog4pSA4pSAIFRBQlMg4pSA4pSAICovCi50YWIgeyBkaXNwbGF5OiBub25lOyB9Ci50YWIuYWN0aXZlIHsgZGlzcGxheTogYmxvY2s7IH0KCi8qIOKUgOKUgCBTRUNUSU9OIFRJVExFIOKUgOKUgCAqLwouc2VjdGlvbi10aXRsZSB7CiAgZm9udC1zaXplOiA4cHg7CiAgZm9udC13ZWlnaHQ6IDcwMDsKICBsZXR0ZXItc3BhY2luZzogMnB4OwogIHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7CiAgY29sb3I6IHZhcigtLW11dGVkKTsKICBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7CiAgbWFyZ2luLWJvdHRvbTogOHB4Owp9CgovKiDilIDilIAgQ0FSRCDilIDilIAgKi8KLmNhcmQgewogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UpOwogIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7CiAgYm9yZGVyLXJhZGl1czogMTJweDsKICBwYWRkaW5nOiAxMXB4IDEycHg7CiAgbWFyZ2luLWJvdHRvbTogOHB4Owp9CgovKiDilIDilIAgRklFTERTIOKUgOKUgCAqLwouZmllbGQgeyBkaXNwbGF5OiBmbGV4OyBmbGV4LWRpcmVjdGlvbjogY29sdW1uOyBnYXA6IDNweDsgbWFyZ2luLWJvdHRvbTogOHB4OyB9Ci5maWVsZDpsYXN0LWNoaWxkIHsgbWFyZ2luLWJvdHRvbTogMDsgfQoKLmZpZWxkIGxhYmVsIHsKICBmb250LXNpemU6IDlweDsKICBmb250LXdlaWdodDogNjAwOwogIGxldHRlci1zcGFjaW5nOiAxLjVweDsKICB0ZXh0LXRyYW5zZm9ybTogdXBwZXJjYXNlOwogIGNvbG9yOiB2YXIoLS1tdXRlZCk7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwp9CgouZmllbGQgaW5wdXQsIC5maWVsZCBzZWxlY3QgewogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UyKSAhaW1wb3J0YW50OwogIGJvcmRlcjogMXB4IHNvbGlkIHJnYmEoMjgsNDMsMzksMC4xOCkgIWltcG9ydGFudDsKICBib3JkZXItcmFkaXVzOiA4cHg7CiAgY29sb3I6IHZhcigtLXRleHQpICFpbXBvcnRhbnQ7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIGZvbnQtc2l6ZTogMTRweDsKICBwYWRkaW5nOiA4cHggMTFweDsKICBvdXRsaW5lOiBub25lOwogIHdpZHRoOiAxMDAlOwogIC13ZWJraXQtYXBwZWFyYW5jZTogbm9uZTsKICBhcHBlYXJhbmNlOiBub25lOwogIG1pbi1oZWlnaHQ6IDQwcHg7Cn0KCi5maWVsZCBpbnB1dFt0eXBlPSJ0ZXh0Il0gewogIGJvcmRlcjogMXB4IHNvbGlkIHJnYmEoMTIsMTA3LDk0LDAuMzUpICFpbXBvcnRhbnQ7Cn0KCi5maWVsZCBpbnB1dDpmb2N1cywgLmZpZWxkIHNlbGVjdDpmb2N1cyB7CiAgYm9yZGVyLWNvbG9yOiByZ2JhKDEyLDEwNyw5NCwwLjcpICFpbXBvcnRhbnQ7CiAgYm94LXNoYWRvdzogMCAwIDAgMnB4IHJnYmEoMTIsMTA3LDk0LDAuMSk7Cn0KCi5maWVsZCBzZWxlY3QgeyBiYWNrZ3JvdW5kLWltYWdlOiB1cmwoImRhdGE6aW1hZ2Uvc3ZnK3htbCwlM0NzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB3aWR0aD0nMTInIGhlaWdodD0nOCcgdmlld0JveD0nMCAwIDEyIDgnJTNFJTNDcGF0aCBkPSdNMSAxbDUgNSA1LTUnIHN0cm9rZT0nJTIzNWE2YTdhJyBzdHJva2Utd2lkdGg9JzEuNScgZmlsbD0nbm9uZScgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8lM0UlM0Mvc3ZnJTNFIikgIWltcG9ydGFudDsgYmFja2dyb3VuZC1yZXBlYXQ6IG5vLXJlcGVhdCAhaW1wb3J0YW50OyBiYWNrZ3JvdW5kLXBvc2l0aW9uOiByaWdodCAxMXB4IGNlbnRlciAhaW1wb3J0YW50OyBwYWRkaW5nLXJpZ2h0OiAzMHB4ICFpbXBvcnRhbnQ7IH0KCi5maWVsZCBzZWxlY3Qgb3B0aW9uIHsgYmFja2dyb3VuZDogI2ZmZmZmZjsgY29sb3I6ICMxYzJiMjc7IH0KCi5maWVsZC1yb3cgeyBkaXNwbGF5OiBncmlkOyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IDFmciAxZnI7IGdhcDogOHB4OyB9Ci5maWVsZC1yb3czIHsgZGlzcGxheTogZ3JpZDsgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOiAxZnIgMWZyIDFmcjsgZ2FwOiA2cHg7IH0KCi5maWVsZC1oaW50IHsKICBmb250LXNpemU6IDEwcHg7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIGNvbG9yOiB2YXIoLS1hY2NlbnQpOwogIG1hcmdpbi10b3A6IDJweDsKICBtaW4taGVpZ2h0OiAxM3B4Owp9CgouYXJiLWZpZWxkIHsKICBiYWNrZ3JvdW5kOiByZ2JhKDEyLDEwNyw5NCwwLjA0KTsKICBib3JkZXI6IDFweCBzb2xpZCByZ2JhKDEyLDEwNyw5NCwwLjE1KTsKICBib3JkZXItcmFkaXVzOiA4cHg7CiAgcGFkZGluZzogOHB4IDExcHg7CiAgbWFyZ2luLWJvdHRvbTogMDsKfQoKLmFyYi1maWVsZCBsYWJlbCB7IGNvbG9yOiByZ2JhKDEyLDEwNyw5NCwwLjcpICFpbXBvcnRhbnQ7IH0KCi8qIOKUgOKUgCBCVVRUT04g4pSA4pSAICovCi5idG4gewogIHdpZHRoOiAxMDAlOwogIHBhZGRpbmc6IDEycHg7CiAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50KTsKICBjb2xvcjogI2ZmZmZmZjsKICBmb250LWZhbWlseTogdmFyKC0tZm9udCk7CiAgZm9udC1zaXplOiAxNHB4OwogIGZvbnQtd2VpZ2h0OiA3MDA7CiAgYm9yZGVyOiBub25lOwogIGJvcmRlci1yYWRpdXM6IDEwcHg7CiAgY3Vyc29yOiBwb2ludGVyOwogIG1pbi1oZWlnaHQ6IDQ0cHg7CiAgdHJhbnNpdGlvbjogb3BhY2l0eSAwLjE1cywgdHJhbnNmb3JtIDAuMXM7CiAgbGV0dGVyLXNwYWNpbmc6IDAuM3B4Owp9Ci5idG46YWN0aXZlIHsgdHJhbnNmb3JtOiBzY2FsZSgwLjk3KTsgb3BhY2l0eTogMC45OyB9CgouYnRuLW91dGxpbmUgewogIGJhY2tncm91bmQ6IHRyYW5zcGFyZW50OwogIGNvbG9yOiB2YXIoLS1hY2NlbnQpOwogIGJvcmRlcjogMS41cHggc29saWQgcmdiYSgxMiwxMDcsOTQsMC4zNSk7Cn0KCi5idG4tZGFuZ2VyIHsKICBiYWNrZ3JvdW5kOiB0cmFuc3BhcmVudDsKICBjb2xvcjogdmFyKC0tZGFuZ2VyKTsKICBib3JkZXI6IDFweCBzb2xpZCByZ2JhKDIyMCwzOCwzOCwwLjMpOwogIGZvbnQtc2l6ZTogMTNweDsKICBwYWRkaW5nOiAxMHB4OwogIG1pbi1oZWlnaHQ6IDQwcHg7Cn0KCi8qIOKUgOKUgCBUQUJMRSBERSBDQVJUw5VFUyDilIDilIAgKi8KLnRhYmxlLXNjcm9sbCB7IG92ZXJmbG93LXg6IGF1dG87IC13ZWJraXQtb3ZlcmZsb3ctc2Nyb2xsaW5nOiB0b3VjaDsgfQoKLmRhdGEtdGFibGUgewogIGJvcmRlci1jb2xsYXBzZTogY29sbGFwc2U7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIGZvbnQtc2l6ZTogMTJweDsKICB3aGl0ZS1zcGFjZTogbm93cmFwOwp9CgouZGF0YS10YWJsZSB0aCB7CiAgY29sb3I6IHZhcigtLW11dGVkKTsKICBmb250LXNpemU6IDEwcHg7CiAgZm9udC13ZWlnaHQ6IDUwMDsKICB0ZXh0LWFsaWduOiBjZW50ZXI7CiAgcGFkZGluZzogNXB4IDZweDsKICBib3JkZXItYm90dG9tOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKICBsZXR0ZXItc3BhY2luZzogMC41cHg7Cn0KCi5kYXRhLXRhYmxlIC5yb3ctbGFiZWwgewogIGZvbnQtc2l6ZTogMTBweDsKICBjb2xvcjogdmFyKC0tbXV0ZWQpOwogIHBhZGRpbmctcmlnaHQ6IDEwcHg7CiAgd2hpdGUtc3BhY2U6IG5vd3JhcDsKfQoKLmRhdGEtdGFibGUgdGQgeyBwYWRkaW5nOiAzcHg7IH0KCi5kYXRhLXRhYmxlIGlucHV0IHsKICB3aWR0aDogNDhweDsKICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlMikgIWltcG9ydGFudDsKICBib3JkZXI6IDFweCBzb2xpZCByZ2JhKDI4LDQzLDM5LDAuMTgpICFpbXBvcnRhbnQ7CiAgYm9yZGVyLXJhZGl1czogNnB4OwogIGNvbG9yOiB2YXIoLS10ZXh0KSAhaW1wb3J0YW50OwogIGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBmb250LXNpemU6IDEzcHg7CiAgcGFkZGluZzogOHB4IDRweDsKICB0ZXh0LWFsaWduOiBjZW50ZXI7CiAgb3V0bGluZTogbm9uZTsKICBtaW4taGVpZ2h0OiAzNnB4OwogIC13ZWJraXQtYXBwZWFyYW5jZTogbm9uZTsKfQoKLmRhdGEtdGFibGUgaW5wdXQ6Zm9jdXMgeyBib3JkZXItY29sb3I6IHJnYmEoMTIsMTA3LDk0LDAuNikgIWltcG9ydGFudDsgfQoKLyog4pSA4pSAIENIQVJUIOKUgOKUgCAqLwouY2hhcnQtd3JhcCB7IGhlaWdodDogMjAwcHg7IHBvc2l0aW9uOiByZWxhdGl2ZTsgfQoKLyog4pSA4pSAIE3DiVRSSUNBUyDilIDilIAgKi8KLm1ldHJpY3MtMiB7IGRpc3BsYXk6IGdyaWQ7IGdyaWQtdGVtcGxhdGUtY29sdW1uczogMWZyIDFmcjsgZ2FwOiAxMHB4OyBtYXJnaW4tYm90dG9tOiAxMHB4OyB9Ci5tZXRyaWNzLTQgeyBkaXNwbGF5OiBncmlkOyBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IHJlcGVhdCg0LCAxZnIpOyBnYXA6IDhweDsgbWFyZ2luLWJvdHRvbTogMTBweDsgfQoKLm1jYXJkIHsKICBiYWNrZ3JvdW5kOiB2YXIoLS1zdXJmYWNlMik7CiAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKICBib3JkZXItcmFkaXVzOiAxMHB4OwogIHBhZGRpbmc6IDEwcHggMTJweDsKfQoubWNhcmQtbGFiZWwgewogIGZvbnQtc2l6ZTogOXB4OwogIGZvbnQtd2VpZ2h0OiA2MDA7CiAgbGV0dGVyLXNwYWNpbmc6IDFweDsKICB0ZXh0LXRyYW5zZm9ybTogdXBwZXJjYXNlOwogIGNvbG9yOiB2YXIoLS1tdXRlZCk7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIG1hcmdpbi1ib3R0b206IDNweDsKfQoubWNhcmQtdmFsdWUgewogIGZvbnQtc2l6ZTogMTVweDsKICBmb250LXdlaWdodDogNzAwOwogIGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBjb2xvcjogdmFyKC0tdGV4dCk7Cn0KLm1jYXJkLXVuaXQgewogIGZvbnQtc2l6ZTogOXB4OwogIGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBjb2xvcjogdmFyKC0tbXV0ZWQpOwp9CgovKiDilIDilIAgU1RBVFVTIEJBTk5FUiDilIDilIAgKi8KLnN0YXR1cy1iYW5uZXIgewogIGJvcmRlci1yYWRpdXM6IDEycHg7CiAgcGFkZGluZzogMTRweCAxNnB4OwogIGRpc3BsYXk6IGZsZXg7CiAgYWxpZ24taXRlbXM6IGNlbnRlcjsKICBqdXN0aWZ5LWNvbnRlbnQ6IHNwYWNlLWJldHdlZW47CiAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsKICBtYXJnaW4tYm90dG9tOiAxMnB4OwogIHRyYW5zaXRpb246IGFsbCAwLjNzOwp9Ci5zdGF0dXMtYmFubmVyLmdvb2QgIHsgYmFja2dyb3VuZDogcmdiYSgxMiwxMDcsOTQsMC4wNyk7IGJvcmRlci1jb2xvcjogcmdiYSgxMiwxMDcsOTQsMC4zKTsgfQouc3RhdHVzLWJhbm5lci5tZWRpdW17IGJhY2tncm91bmQ6IHJnYmEoMTgwLDgzLDksMC4wNyk7IGJvcmRlci1jb2xvcjogcmdiYSgxODAsODMsOSwwLjMpOyB9Ci5zdGF0dXMtYmFubmVyLmJhZCAgIHsgYmFja2dyb3VuZDogcmdiYSgyMjAsMzgsMzgsMC4wNyk7IGJvcmRlci1jb2xvcjogcmdiYSgyMjAsMzgsMzgsMC4zKTsgfQoKLnNiLWxlaXR1cmEgeyBmb250LXNpemU6IDEwcHg7IGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsgY29sb3I6IHZhcigtLW11dGVkKTsgbWFyZ2luLWJvdHRvbTogMnB4OyB9Ci5zYi1zdGF0dXMgIHsgZm9udC1zaXplOiAxNHB4OyBmb250LXdlaWdodDogODAwOyB9Ci5zdGF0dXMtYmFubmVyLmdvb2QgIC5zYi1zdGF0dXMgeyBjb2xvcjogdmFyKC0tYWNjZW50KTsgfQouc3RhdHVzLWJhbm5lci5tZWRpdW0gLnNiLXN0YXR1cyB7IGNvbG9yOiB2YXIoLS13YXJuKTsgfQouc3RhdHVzLWJhbm5lci5iYWQgICAuc2Itc3RhdHVzIHsgY29sb3I6IHZhcigtLWRhbmdlcik7IH0KCi5zYi1ldi1sYWJlbCB7IGZvbnQtc2l6ZTogOXB4OyBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7IGNvbG9yOiB2YXIoLS1tdXRlZCk7IHRleHQtYWxpZ246IHJpZ2h0OyBtYXJnaW4tYm90dG9tOiAxcHg7IH0KLnNiLWV2LXZhbHVlIHsgZm9udC1zaXplOiAyMnB4OyBmb250LXdlaWdodDogODAwOyBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7IH0KLnN0YXR1cy1iYW5uZXIuZ29vZCAgLnNiLWV2LXZhbHVlIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KLnN0YXR1cy1iYW5uZXIubWVkaXVtIC5zYi1ldi12YWx1ZSB7IGNvbG9yOiB2YXIoLS13YXJuKTsgfQouc3RhdHVzLWJhbm5lci5iYWQgICAuc2ItZXYtdmFsdWUgeyBjb2xvcjogdmFyKC0tZGFuZ2VyKTsgfQoKLyog4pSA4pSAIEhJU1TDk1JJQ08g4pSA4pSAICovCi5hbmFsaXNlLWNhcmQgewogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UyKTsKICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogIGJvcmRlci1yYWRpdXM6IDEycHg7CiAgcGFkZGluZzogMTJweCAxNHB4OwogIG1hcmdpbi1ib3R0b206IDEwcHg7CiAgYW5pbWF0aW9uOiBmYWRlSW4gMC4ycyBlYXNlOwp9CgpAa2V5ZnJhbWVzIGZhZGVJbiB7IGZyb20geyBvcGFjaXR5OjA7IHRyYW5zZm9ybTp0cmFuc2xhdGVZKDVweCk7IH0gdG8geyBvcGFjaXR5OjE7IHRyYW5zZm9ybTpub25lOyB9IH0KCi5hYy1oZWFkZXIgeyBkaXNwbGF5OiBmbGV4OyBhbGlnbi1pdGVtczogZmxleC1zdGFydDsganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOyBtYXJnaW4tYm90dG9tOiA2cHg7IH0KLmFjLXBhcnRpZGEgeyBmb250LXNpemU6IDE0cHg7IGZvbnQtd2VpZ2h0OiA3MDA7IGNvbG9yOiB2YXIoLS10ZXh0KTsgfQouYWMtc3RhdHVzIHsKICBmb250LXNpemU6IDEwcHg7IGZvbnQtd2VpZ2h0OiA3MDA7IGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBwYWRkaW5nOiAzcHggOHB4OyBib3JkZXItcmFkaXVzOiAyMHB4OyB3aGl0ZS1zcGFjZTogbm93cmFwOyBtYXJnaW4tbGVmdDogOHB4OyBmbGV4LXNocmluazogMDsKfQouYWMtc3RhdHVzLmdvb2QgICB7IGJhY2tncm91bmQ6IHJnYmEoMTIsMTA3LDk0LDAuMTUpOyBjb2xvcjogdmFyKC0tYWNjZW50KTsgfQouYWMtc3RhdHVzLm1lZGl1bSB7IGJhY2tncm91bmQ6IHJnYmEoMTgwLDgzLDksMC4xNSk7IGNvbG9yOiB2YXIoLS13YXJuKTsgfQouYWMtc3RhdHVzLmJhZCAgICB7IGJhY2tncm91bmQ6IHJnYmEoMjIwLDM4LDM4LDAuMTUpOyBjb2xvcjogdmFyKC0tZGFuZ2VyKTsgfQoKLmFjLW1ldGEgeyBmb250LXNpemU6IDExcHg7IGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsgY29sb3I6IHZhcigtLW11dGVkKTsgZGlzcGxheTogZmxleDsgZmxleC13cmFwOiB3cmFwOyBnYXA6IDZweDsgfQouYWMtbWV0YSBzcGFuIHsgd2hpdGUtc3BhY2U6IG5vd3JhcDsgfQouYWMtbGVpdHVyYSB7IGZvbnQtc2l6ZTogMTFweDsgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOyBjb2xvcjogdmFyKC0tbXV0ZWQpOyBtYXJnaW4tdG9wOiA1cHg7IH0KCi5hYy1mb290ZXIgeyBkaXNwbGF5OiBmbGV4OyBhbGlnbi1pdGVtczogY2VudGVyOyBqdXN0aWZ5LWNvbnRlbnQ6IHNwYWNlLWJldHdlZW47IG1hcmdpbi10b3A6IDEwcHg7IGdhcDogOHB4OyB9Ci5hYy1yZXN1bHQtYnRucyB7IGRpc3BsYXk6IGZsZXg7IGdhcDogNnB4OyB9Ci5hYy1yZXN1bHQtYnRuIHsKICBmb250LXNpemU6IDExcHg7IGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsgZm9udC13ZWlnaHQ6IDcwMDsKICBib3JkZXItcmFkaXVzOiA2cHg7IHBhZGRpbmc6IDVweCAxMXB4OyBjdXJzb3I6IHBvaW50ZXI7IGJvcmRlcjogMXB4IHNvbGlkIHRyYW5zcGFyZW50OwogIHRyYW5zaXRpb246IG9wYWNpdHkgMC4ycywgdHJhbnNmb3JtIDAuMXM7Cn0KLmFjLXJlc3VsdC1idG46YWN0aXZlIHsgdHJhbnNmb3JtOiBzY2FsZSgwLjk1KTsgfQouYWMtcmVzdWx0LWJ0bi53aW4gewogIGJhY2tncm91bmQ6IHJnYmEoMTIsMTA3LDk0LDAuMTIpOyBjb2xvcjogdmFyKC0tYWNjZW50KTsgYm9yZGVyLWNvbG9yOiByZ2JhKDEyLDEwNyw5NCwwLjMpOwp9Ci5hYy1yZXN1bHQtYnRuLndpbi5hY3RpdmUgewogIGJhY2tncm91bmQ6IHJnYmEoMTIsMTA3LDk0LDAuMjgpOyBib3JkZXItY29sb3I6IHZhcigtLWFjY2VudCk7Cn0KLmFjLXJlc3VsdC1idG4ubG9zcyB7CiAgYmFja2dyb3VuZDogcmdiYSgyMjAsMzgsMzgsMC4wOCk7IGNvbG9yOiB2YXIoLS1kYW5nZXIpOyBib3JkZXItY29sb3I6IHJnYmEoMjIwLDM4LDM4LDAuMik7Cn0KLmFjLXJlc3VsdC1idG4ubG9zcy5hY3RpdmUgewogIGJhY2tncm91bmQ6IHJnYmEoMjIwLDM4LDM4LDAuMjIpOyBib3JkZXItY29sb3I6IHZhcigtLWRhbmdlcik7Cn0KLmFjLXJlc3VsdC1sYWJlbCB7CiAgZm9udC1zaXplOiAxMXB4OyBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7IGZvbnQtd2VpZ2h0OiA3MDA7IHBhZGRpbmc6IDNweCAwOwp9Ci5hYy1yZXN1bHQtbGFiZWwud2luIHsgY29sb3I6IHZhcigtLWFjY2VudCk7IH0KLmFjLXJlc3VsdC1sYWJlbC5sb3NzIHsgY29sb3I6IHZhcigtLWRhbmdlcik7IH0KLmFjLWRlbCB7CiAgZm9udC1zaXplOiAxMnB4OyBmb250LWZhbWlseTogdmFyKC0tbW9ubyk7IGNvbG9yOiB2YXIoLS1kYW5nZXIpOwogIGJhY2tncm91bmQ6IHJnYmEoMjIwLDM4LDM4LDAuMDgpOyBib3JkZXI6IDFweCBzb2xpZCByZ2JhKDIyMCwzOCwzOCwwLjIpOwogIGJvcmRlci1yYWRpdXM6IDZweDsgcGFkZGluZzogNXB4IDEwcHg7IGN1cnNvcjogcG9pbnRlcjsKfQoKLmhpc3QtaGVhZGVyIHsgZGlzcGxheTogZmxleDsgYWxpZ24taXRlbXM6IGNlbnRlcjsganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOyBtYXJnaW4tYm90dG9tOiAxNHB4OyB9CgovKiDilIDilIAgRU1QVFkgU1RBVEUg4pSA4pSAICovCi5lbXB0eSB7CiAgdGV4dC1hbGlnbjogY2VudGVyOwogIHBhZGRpbmc6IDQwcHggMjBweDsKICBjb2xvcjogdmFyKC0tbXV0ZWQpOwogIGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBmb250LXNpemU6IDEycHg7Cn0KLmVtcHR5LWljb24geyBmb250LXNpemU6IDMycHg7IG1hcmdpbi1ib3R0b206IDEwcHg7IH0KCi8qIOKUgOKUgCBUT0FTVCDilIDilIAgKi8KLnRvYXN0IHsKICBwb3NpdGlvbjogZml4ZWQ7CiAgYm90dG9tOiBjYWxjKHZhcigtLW5hdi1oKSArIDEycHgpOwogIGxlZnQ6IDUwJTsKICB0cmFuc2Zvcm06IHRyYW5zbGF0ZVgoLTUwJSkgdHJhbnNsYXRlWSg4cHgpOwogIGJhY2tncm91bmQ6IHZhcigtLXN1cmZhY2UpOwogIGJvcmRlcjogMXB4IHNvbGlkIHJnYmEoMTIsMTA3LDk0LDAuMzUpOwogIGNvbG9yOiB2YXIoLS1hY2NlbnQpOwogIGZvbnQtZmFtaWx5OiB2YXIoLS1tb25vKTsKICBmb250LXNpemU6IDEycHg7CiAgcGFkZGluZzogMTBweCAxOHB4OwogIGJvcmRlci1yYWRpdXM6IDhweDsKICBvcGFjaXR5OiAwOwogIHBvaW50ZXItZXZlbnRzOiBub25lOwogIHRyYW5zaXRpb246IG9wYWNpdHkgMC4ycywgdHJhbnNmb3JtIDAuMnM7CiAgei1pbmRleDogOTk5OwogIHdoaXRlLXNwYWNlOiBub3dyYXA7Cn0KLnRvYXN0LnNob3cgeyBvcGFjaXR5OiAxOyB0cmFuc2Zvcm06IHRyYW5zbGF0ZVgoLTUwJSkgdHJhbnNsYXRlWSgwKTsgfQoKLyog4pSA4pSAIEhJTlQgVEFCTEUg4pSA4pSAICovCi5oaW50LXRhYmxlIHsKICBmb250LXNpemU6IDExcHg7CiAgZm9udC1mYW1pbHk6IHZhcigtLW1vbm8pOwogIGNvbG9yOiB2YXIoLS1tdXRlZCk7CiAgdGV4dC1hbGlnbjogY2VudGVyOwogIHBhZGRpbmc6IDE0cHggMCA0cHg7Cn0KPC9zdHlsZT4KPC9oZWFkPgo8Ym9keT4KCjxkaXYgY2xhc3M9ImFwcCI+CgogIDwhLS0gSEVBREVSIC0tPgogIDxoZWFkZXIgY2xhc3M9ImFwcC1oZWFkZXIiPgogICAgPGRpdiBjbGFzcz0ibG9nbyI+CiAgICAgIDxkaXYgY2xhc3M9ImxvZ28taWNvbiI+8J+fqDwvZGl2PgogICAgICA8ZGl2PgogICAgICAgIDxkaXYgY2xhc3M9ImxvZ28tdGV4dCI+QmV0IEFuYWx5emVyPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0ibG9nby1zdWIiPlBSTyBNQVg8L2Rpdj4KICAgICAgPC9kaXY+CiAgICA8L2Rpdj4KICAgIDxkaXYgY2xhc3M9ImhlYWRlci1iYWRnZSI+T3ZlciBDYXJ0w7VlczwvZGl2PgogIDwvaGVhZGVyPgoKICA8IS0tIENPTlRFw5pETyAtLT4KICA8ZGl2IGNsYXNzPSJhcHAtY29udGVudCIgaWQ9ImFwcENvbnRlbnQiPgoKICAgIDwhLS0gQUJBOiBDT05GSUdVUkHDh8ODTyAtLT4KICAgIDxkaXYgY2xhc3M9InRhYiBhY3RpdmUiIGlkPSJ0YWItY29uZmlnIj4KCiAgICAgIDwhLS0gVGltZXMgKyBQYXJ0aWRhIC0tPgogICAgICA8ZGl2IGNsYXNzPSJjYXJkIj4KICAgICAgICA8ZGl2IGNsYXNzPSJzZWN0aW9uLXRpdGxlIj5QYXJ0aWRhPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0iZmllbGQtcm93IiBzdHlsZT0ibWFyZ2luLWJvdHRvbTo4cHg7Ij4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPlRpbWUgMTwvbGFiZWw+CiAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idGltZTEiIC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPlRpbWUgMjwvbGFiZWw+CiAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idGltZTIiIC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJmaWVsZC1yb3czIj4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPk7CuiBKb2dvczwvbGFiZWw+CiAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJudW1iZXIiIGlkPSJudW1Kb2dvcyIgdmFsdWU9IjEwIiBtaW49IjEiIG1heD0iMjAiIC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPkxpbmhhIE92ZXI8L2xhYmVsPgogICAgICAgICAgICA8aW5wdXQgdHlwZT0ibnVtYmVyIiBpZD0ib3ZlckxpbmhhIiB2YWx1ZT0iMy41IiBzdGVwPSIwLjUiIC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPk9kZDwvbGFiZWw+CiAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJudW1iZXIiIGlkPSJvZGQiIHZhbHVlPSIxLjgwIiBzdGVwPSIwLjAxIiAvPgogICAgICAgICAgPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0iZmllbGQiPgogICAgICAgICAgPGxhYmVsPkNvbnRleHRvIGRvIEpvZ288L2xhYmVsPgogICAgICAgICAgPHNlbGVjdCBpZD0iY29udGV4dG8iPgogICAgICAgICAgICA8b3B0aW9uIHZhbHVlPSIwIj5Ob3JtYWw8L29wdGlvbj4KICAgICAgICAgICAgPG9wdGlvbiB2YWx1ZT0iMSI+RGVjaXNpdm88L29wdGlvbj4KICAgICAgICAgICAgPG9wdGlvbiB2YWx1ZT0iMiI+Q2zDoXNzaWNvPC9vcHRpb24+CiAgICAgICAgICA8L3NlbGVjdD4KICAgICAgICA8L2Rpdj4KICAgICAgPC9kaXY+CgogICAgICA8IS0tIMOBcmJpdHJvIC0tPgogICAgICA8ZGl2IGNsYXNzPSJjYXJkIj4KICAgICAgICA8ZGl2IGNsYXNzPSJzZWN0aW9uLXRpdGxlIj7DgXJiaXRybzwvZGl2PgogICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgIDxsYWJlbD5Ob21lIGRvIMOBcmJpdHJvPC9sYWJlbD4KICAgICAgICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0ibm9tZUFyYml0cm8iIC8+CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0iZmllbGQtcm93IiBzdHlsZT0ibWFyZ2luLWJvdHRvbTo4cHg7Ij4KICAgICAgICAgIDxkaXYgY2xhc3M9ImZpZWxkIj4KICAgICAgICAgICAgPGxhYmVsPlJpZ29yICgx4oCTMTApPC9sYWJlbD4KICAgICAgICAgICAgPGlucHV0IHR5cGU9Im51bWJlciIgaWQ9Im1lZGlhQXJiaXRybyIgdmFsdWU9IjUiIHN0ZXA9IjAuMSIgbWluPSIxIiBtYXg9IjEwIiBvbmlucHV0PSJjYWxjdWxhcigpIiAvPgogICAgICAgICAgPC9kaXY+CiAgICAgICAgICA8ZGl2IGNsYXNzPSJmaWVsZCI+CiAgICAgICAgICAgIDxsYWJlbD5Nw6lkaWEgY2FydC9qb2dvPC9sYWJlbD4KICAgICAgICAgICAgPGlucHV0IHR5cGU9Im51bWJlciIgaWQ9ImFyYk1lZGlhQ2FydG9lcyIgc3RlcD0iMC4xIiBtaW49IjAiIG9uaW5wdXQ9ImNhbGN1bGFyKCkiIC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJhcmItZmllbGQiPgogICAgICAgICAgPGxhYmVsIHN0eWxlPSJmb250LXNpemU6OHB4O2xldHRlci1zcGFjaW5nOjEuNXB4O3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjpyZ2JhKDEyLDEwNyw5NCwwLjcpO2ZvbnQtZmFtaWx5OnZhcigtLW1vbm8pO2ZvbnQtd2VpZ2h0OjcwMDsiPkxlaXR1cmEgZG8gw6FyYml0cm88L2xhYmVsPgogICAgICAgICAgPHNwYW4gY2xhc3M9ImZpZWxkLWhpbnQiIGlkPSJhcmJIaW50IiBzdHlsZT0iZGlzcGxheTpibG9jazttYXJnaW4tdG9wOjNweDsiPlByZWVuY2hhIG9zIGRhZG9zIGFjaW1hPC9zcGFuPgogICAgICAgIDwvZGl2PgogICAgICA8L2Rpdj4KCiAgICAgIDxidXR0b24gY2xhc3M9ImJ0biIgb25jbGljaz0iZ2VyYXJUYWJlbGFFSXIoKSI+4oa7IEdlcmFyIFRhYmVsYSBkZSBEYWRvczwvYnV0dG9uPgoKICAgIDwvZGl2PgoKICAgIDwhLS0gQUJBOiBEQURPUyAtLT4KICAgIDxkaXYgY2xhc3M9InRhYiIgaWQ9InRhYi1kYWRvcyI+CgogICAgICA8ZGl2IGNsYXNzPSJjYXJkIj4KICAgICAgICA8ZGl2IGNsYXNzPSJzZWN0aW9uLXRpdGxlIj5IaXN0w7NyaWNvIGRlIENhcnTDtWVzIHBvciBKb2dvPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0idGFibGUtc2Nyb2xsIj4KICAgICAgICAgIDx0YWJsZSBjbGFzcz0iZGF0YS10YWJsZSIgaWQ9InRhYmVsYSI+PC90YWJsZT4KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJoaW50LXRhYmxlIiBpZD0iaGludCI+Q29uZmlndXJlIG5hIGFiYSBhbnRlcmlvciBlIGdlcmUgYSB0YWJlbGE8L2Rpdj4KICAgICAgPC9kaXY+CgogICAgICA8ZGl2IGNsYXNzPSJjYXJkIj4KICAgICAgICA8ZGl2IGNsYXNzPSJzZWN0aW9uLXRpdGxlIj5Db25mcm9udG9zIERpcmV0b3MgKEgySCk8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJ0YWJsZS1zY3JvbGwiPgogICAgICAgICAgPHRhYmxlIGNsYXNzPSJkYXRhLXRhYmxlIiBpZD0idGFiZWxhSDJIIj48L3RhYmxlPgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXYgY2xhc3M9ImhpbnQtdGFibGUiIGlkPSJoaW50SDJIIj7Dmmx0aW1vcyA1IGpvZ29zIGVudHJlIG9zIGRvaXMgdGltZXMgKG9wY2lvbmFsLCBkZWl4ZSBlbSBicmFuY28gc2UgbsOjbyBzb3ViZXIpPC9kaXY+CiAgICAgIDwvZGl2PgoKICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+CiAgICAgICAgPGRpdiBjbGFzcz0ic2VjdGlvbi10aXRsZSI+RGlzdHJpYnVpw6fDo28gcG9yIEpvZ288L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJjaGFydC13cmFwIj4KICAgICAgICAgIDxjYW52YXMgaWQ9ImdyYWZpY28iPjwvY2FudmFzPgogICAgICAgIDwvZGl2PgogICAgICA8L2Rpdj4KCiAgICA8L2Rpdj4KCiAgICA8IS0tIEFCQTogUkVTVUxUQURPIC0tPgogICAgPGRpdiBjbGFzcz0idGFiIiBpZD0idGFiLXJlc3VsdGFkbyI+CgogICAgICA8IS0tIE3DqWRpYXMgaW5kaXZpZHVhaXMgLS0+CiAgICAgIDxkaXYgY2xhc3M9Im1ldHJpY3MtMiI+CiAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQiIHN0eWxlPSJib3JkZXItY29sb3I6IHJnYmEoMCwxNzAsMjU1LDAuMyk7Ij4KICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLWxhYmVsIiBzdHlsZT0iY29sb3I6dmFyKC0tYmx1ZSk7IiBpZD0ibGFiZWwtdDEiPk3DqWRpYSBUaW1lIDE8L2Rpdj4KICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpiYXNlbGluZTtnYXA6NHB4OyI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLXZhbHVlIiBpZD0ibWVkaWFUMSI+4oCUPC9kaXY+CiAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJtY2FyZC11bml0Ij5jYXJ0L2o8L3NwYW4+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzPSJtY2FyZCIgc3R5bGU9ImJvcmRlci1jb2xvcjogcmdiYSgxNjcsMTM5LDI1MCwwLjMpOyI+CiAgICAgICAgICA8ZGl2IGNsYXNzPSJtY2FyZC1sYWJlbCIgc3R5bGU9ImNvbG9yOnZhcigtLXB1cnBsZSk7IiBpZD0ibGFiZWwtdDIiPk3DqWRpYSBUaW1lIDI8L2Rpdj4KICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpiYXNlbGluZTtnYXA6NHB4OyI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLXZhbHVlIiBpZD0ibWVkaWFUMiI+4oCUPC9kaXY+CiAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJtY2FyZC11bml0Ij5jYXJ0L2o8L3NwYW4+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KICAgICAgPC9kaXY+CgogICAgICA8IS0tIE3DqXRyaWNhcyBnZXJhaXMgLS0+CiAgICAgIDxkaXYgY2xhc3M9Im1ldHJpY3MtNCI+CiAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQiPgogICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQtbGFiZWwiPk3DqWRpYTwvZGl2PgogICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQtdmFsdWUiIGlkPSJtZWRpYSI+4oCUPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQiPgogICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQtbGFiZWwiPlByb2IuPC9kaXY+CiAgICAgICAgICA8ZGl2IGNsYXNzPSJtY2FyZC12YWx1ZSIgaWQ9InByb2IiPuKAlDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkIj4KICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLWxhYmVsIj5PZGQganVzdGE8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLXZhbHVlIiBpZD0ib2RkSnVzdGEiPuKAlDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkIj4KICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLWxhYmVsIj5FVjwvZGl2PgogICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQtdmFsdWUiIGlkPSJldiI+4oCUPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgoKICAgICAgPCEtLSBTdGF0dXMgLS0+CiAgICAgIDxkaXYgY2xhc3M9InN0YXR1cy1iYW5uZXIiIGlkPSJzdGF0dXNCYW5uZXIiPgogICAgICAgIDxkaXY+CiAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1sZWl0dXJhIiBpZD0ibGVpdHVyYSI+QWd1YXJkYW5kbyBkYWRvc+KApjwvZGl2PgogICAgICAgICAgPGRpdiBjbGFzcz0ic2Itc3RhdHVzIiBpZD0ic3RhdHVzIj5QUkVFTkNIQSBPUyBEQURPUzwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXY+CiAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1ldi1sYWJlbCI+VkFMT1IgRVY8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9InNiLWV2LXZhbHVlIiBpZD0iZXZCaWciPuKAlDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICA8L2Rpdj4KCiAgICAgIDwhLS0gQ29uZnJvbnRvcyBEaXJldG9zIC0tPgogICAgICA8ZGl2IGNsYXNzPSJjYXJkIiBpZD0iaDJoQ2FyZCIgc3R5bGU9ImRpc3BsYXk6bm9uZTsiPgogICAgICAgIDxkaXYgY2xhc3M9InNlY3Rpb24tdGl0bGUiPvCfpJ0gQ29uZnJvbnRvcyBEaXJldG9zIChIMkgpPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0ibWV0cmljcy0yIj4KICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkIj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQtbGFiZWwiPk3DqWRpYSBIMkg8L2Rpdj4KICAgICAgICAgICAgPGRpdiBzdHlsZT0iZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmJhc2VsaW5lO2dhcDo0cHg7Ij4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJtY2FyZC12YWx1ZSIgaWQ9Im1lZGlhSDJIIj7igJQ8L2Rpdj4KICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0ibWNhcmQtdW5pdCI+Y2FydC9qPC9zcGFuPgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDwvZGl2PgogICAgICAgICAgPGRpdiBjbGFzcz0ibWNhcmQiPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJtY2FyZC1sYWJlbCI+Sm9nb3MgY29uc2lkZXJhZG9zPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9Im1jYXJkLXZhbHVlIiBpZD0iam9nb3NIMkgiPuKAlDwvZGl2PgogICAgICAgICAgPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdiBjbGFzcz0iZmllbGQtaGludCIgaWQ9ImgyaEhpbnQiIHN0eWxlPSJtYXJnaW4tdG9wOjhweDsiPuKAlDwvZGl2PgogICAgICA8L2Rpdj4KCiAgICAgIDxidXR0b24gY2xhc3M9ImJ0biBidG4tb3V0bGluZSIgb25jbGljaz0ic2FsdmFyQW5hbGlzZSgpIj7wn5K+IFNhbHZhciBBbsOhbGlzZTwvYnV0dG9uPgoKICAgIDwvZGl2PgoKICAgIDwhLS0gQUJBOiBISVNUw5NSSUNPIC0tPgogICAgPGRpdiBjbGFzcz0idGFiIiBpZD0idGFiLWhpc3QiPgogICAgICA8ZGl2IGNsYXNzPSJoaXN0LWhlYWRlciI+CiAgICAgICAgPGRpdiBjbGFzcz0ic2VjdGlvbi10aXRsZSIgc3R5bGU9Im1hcmdpbi1ib3R0b206MDsiPkFuw6FsaXNlcyBTYWx2YXM8L2Rpdj4KICAgICAgICA8YnV0dG9uIGNsYXNzPSJidG4tZGFuZ2VyIGJ0biIgb25jbGljaz0ibGltcGFySGlzdG9yaWNvKCkiPkxpbXBhciB0dWRvPC9idXR0b24+CiAgICAgIDwvZGl2PgogICAgICA8ZGl2IGlkPSJsaXN0YUFuYWxpc2VzIj48L2Rpdj4KICAgIDwvZGl2PgoKICA8L2Rpdj48IS0tIC9hcHAtY29udGVudCAtLT4KCiAgPCEtLSBCT1RUT00gTkFWIC0tPgogIDxuYXYgY2xhc3M9ImJvdHRvbS1uYXYiPgogICAgPGRpdiBjbGFzcz0ibmF2LWl0ZW0gYWN0aXZlIiBpZD0ibmF2LWNvbmZpZyIgb25jbGljaz0iZ29UYWIoJ2NvbmZpZycpIj4KICAgICAgPGRpdiBjbGFzcz0ibmF2LWljb24iPuKame+4jzwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJuYXYtbGFiZWwiPkNvbmZpZzwvZGl2PgogICAgPC9kaXY+CiAgICA8ZGl2IGNsYXNzPSJuYXYtaXRlbSIgaWQ9Im5hdi1kYWRvcyIgb25jbGljaz0iZ29UYWIoJ2RhZG9zJykiPgogICAgICA8ZGl2IGNsYXNzPSJuYXYtaWNvbiI+8J+TizwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJuYXYtbGFiZWwiPkRhZG9zPC9kaXY+CiAgICA8L2Rpdj4KICAgIDxkaXYgY2xhc3M9Im5hdi1pdGVtIiBpZD0ibmF2LXJlc3VsdGFkbyIgb25jbGljaz0iZ29UYWIoJ3Jlc3VsdGFkbycpIj4KICAgICAgPGRpdiBjbGFzcz0ibmF2LWljb24iPvCfk4o8L2Rpdj4KICAgICAgPGRpdiBjbGFzcz0ibmF2LWxhYmVsIj5SZXN1bHRhZG88L2Rpdj4KICAgIDwvZGl2PgogICAgPGRpdiBjbGFzcz0ibmF2LWl0ZW0iIGlkPSJuYXYtaGlzdCIgb25jbGljaz0iZ29UYWIoJ2hpc3QnKSI+CiAgICAgIDxkaXYgY2xhc3M9Im5hdi1pY29uIj7wn5eC77iPPC9kaXY+CiAgICAgIDxkaXYgY2xhc3M9Im5hdi1sYWJlbCI+SGlzdMOzcmljbzwvZGl2PgogICAgPC9kaXY+CiAgPC9uYXY+Cgo8L2Rpdj4KCjxkaXYgY2xhc3M9InRvYXN0IiBpZD0idG9hc3QiPjwvZGl2PgoKPHNjcmlwdD4KbGV0IGNoYXJ0OwpsZXQgYW5hbGlzZXMgPSBbXTsKCnRyeSB7IGFuYWxpc2VzID0gSlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbSgnYmV0X2FuYWxpc2VzJykgfHwgJ1tdJyk7IH0gY2F0Y2goZSkge30KCi8vIOKUgOKUgCBOQVZFR0HDh8ODTyDilIDilIAKZnVuY3Rpb24gZ29UYWIobmFtZSkgewogIGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJy50YWInKS5mb3JFYWNoKHQgPT4gdC5jbGFzc0xpc3QucmVtb3ZlKCdhY3RpdmUnKSk7CiAgZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnLm5hdi1pdGVtJykuZm9yRWFjaChuID0+IG4uY2xhc3NMaXN0LnJlbW92ZSgnYWN0aXZlJykpOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0YWItJyArIG5hbWUpLmNsYXNzTGlzdC5hZGQoJ2FjdGl2ZScpOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCduYXYtJyArIG5hbWUpLmNsYXNzTGlzdC5hZGQoJ2FjdGl2ZScpOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdhcHBDb250ZW50Jykuc2Nyb2xsVG9wID0gMDsKfQoKLy8g4pSA4pSAIFRPQVNUIOKUgOKUgApmdW5jdGlvbiB0b2FzdChtc2cpIHsKICBjb25zdCBlbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0b2FzdCcpOwogIGVsLnRleHRDb250ZW50ID0gbXNnOwogIGVsLmNsYXNzTGlzdC5hZGQoJ3Nob3cnKTsKICBzZXRUaW1lb3V0KCgpID0+IGVsLmNsYXNzTGlzdC5yZW1vdmUoJ3Nob3cnKSwgMjIwMCk7Cn0KCi8vIOKUgOKUgCBHRVJBUiBUQUJFTEEgRSBJUiBQQVJBIEFCQSBEQURPUyDilIDilIAKZnVuY3Rpb24gZ2VyYXJUYWJlbGFFSXIoKSB7CiAgZ2VyYXJUYWJlbGEoKTsKICBnZXJhclRhYmVsYUgySCgpOwogIGdvVGFiKCdkYWRvcycpOwp9CgovLyDilIDilIAgR0VSQVIgVEFCRUxBIOKUgOKUgApmdW5jdGlvbiBnZXJhclRhYmVsYSgpIHsKICBjb25zdCBuID0gcGFyc2VJbnQoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ251bUpvZ29zJykudmFsdWUpIHx8IDEwOwogIGNvbnN0IHRpbWUxID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RpbWUxJykudmFsdWUgfHwgJ1RpbWUgMSc7CiAgY29uc3QgdGltZTIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndGltZTInKS52YWx1ZSB8fCAnVGltZSAyJzsKICBjb25zdCB0YWJlbGEgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndGFiZWxhJyk7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2hpbnQnKS5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOwogIHRhYmVsYS5pbm5lckhUTUwgPSAnJzsKCiAgY29uc3QgdGhlYWQgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0cicpOwogIGNvbnN0IHRoRW1wdHkgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0aCcpOwogIHRoZWFkLmFwcGVuZENoaWxkKHRoRW1wdHkpOwogIGZvciAobGV0IGogPSAxOyBqIDw9IG47IGorKykgewogICAgY29uc3QgdGggPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0aCcpOwogICAgdGgudGV4dENvbnRlbnQgPSAnSicgKyBqOwogICAgdGhlYWQuYXBwZW5kQ2hpbGQodGgpOwogIH0KICB0YWJlbGEuYXBwZW5kQ2hpbGQodGhlYWQpOwoKICBmb3IgKGxldCBpID0gMTsgaSA8PSAyOyBpKyspIHsKICAgIGNvbnN0IHRyID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndHInKTsKICAgIGNvbnN0IHRkTGFiZWwgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0ZCcpOwogICAgdGRMYWJlbC5jbGFzc05hbWUgPSAncm93LWxhYmVsJzsKICAgIHRkTGFiZWwudGV4dENvbnRlbnQgPSBpID09PSAxID8gdGltZTEgOiB0aW1lMjsKICAgIHRyLmFwcGVuZENoaWxkKHRkTGFiZWwpOwogICAgZm9yIChsZXQgaiA9IDE7IGogPD0gbjsgaisrKSB7CiAgICAgIGNvbnN0IHRkID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGQnKTsKICAgICAgY29uc3QgaW5wID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnaW5wdXQnKTsKICAgICAgaW5wLnR5cGUgPSAnbnVtYmVyJzsgaW5wLm1pbiA9ICcwJzsgaW5wLnBsYWNlaG9sZGVyID0gJzAnOwogICAgICBpbnAub25pbnB1dCA9IGNhbGN1bGFyOwogICAgICBpbnAuZGF0YXNldC5yb3cgPSBpOyBpbnAuZGF0YXNldC5jb2wgPSBqOwogICAgICB0ZC5hcHBlbmRDaGlsZChpbnApOyB0ci5hcHBlbmRDaGlsZCh0ZCk7CiAgICB9CiAgICB0YWJlbGEuYXBwZW5kQ2hpbGQodHIpOwogIH0KfQoKLy8g4pSA4pSAIEdFUkFSIFRBQkVMQSBIMkggKENPTkZST05UT1MgRElSRVRPUykg4pSA4pSACmZ1bmN0aW9uIGdlcmFyVGFiZWxhSDJIKCkgewogIGNvbnN0IG5IID0gNTsKICBjb25zdCB0aW1lMSA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0aW1lMScpLnZhbHVlIHx8ICdUaW1lIDEnOwogIGNvbnN0IHRpbWUyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RpbWUyJykudmFsdWUgfHwgJ1RpbWUgMic7CiAgY29uc3QgdGFiZWxhID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RhYmVsYUgySCcpOwogIHRhYmVsYS5pbm5lckhUTUwgPSAnJzsKCiAgY29uc3QgdGhlYWQgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0cicpOwogIGNvbnN0IHRoRW1wdHkgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0aCcpOwogIHRoZWFkLmFwcGVuZENoaWxkKHRoRW1wdHkpOwogIGZvciAobGV0IGogPSAxOyBqIDw9IG5IOyBqKyspIHsKICAgIGNvbnN0IHRoID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGgnKTsKICAgIHRoLnRleHRDb250ZW50ID0gJ0onICsgajsKICAgIHRoZWFkLmFwcGVuZENoaWxkKHRoKTsKICB9CiAgdGFiZWxhLmFwcGVuZENoaWxkKHRoZWFkKTsKCiAgZm9yIChsZXQgaSA9IDE7IGkgPD0gMjsgaSsrKSB7CiAgICBjb25zdCB0ciA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3RyJyk7CiAgICBjb25zdCB0ZExhYmVsID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGQnKTsKICAgIHRkTGFiZWwuY2xhc3NOYW1lID0gJ3Jvdy1sYWJlbCc7CiAgICB0ZExhYmVsLnRleHRDb250ZW50ID0gaSA9PT0gMSA/IHRpbWUxIDogdGltZTI7CiAgICB0ci5hcHBlbmRDaGlsZCh0ZExhYmVsKTsKICAgIGZvciAobGV0IGogPSAxOyBqIDw9IG5IOyBqKyspIHsKICAgICAgY29uc3QgdGQgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0ZCcpOwogICAgICBjb25zdCBpbnAgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdpbnB1dCcpOwogICAgICBpbnAudHlwZSA9ICdudW1iZXInOyBpbnAubWluID0gJzAnOyBpbnAucGxhY2Vob2xkZXIgPSAnMCc7CiAgICAgIGlucC5vbmlucHV0ID0gY2FsY3VsYXI7CiAgICAgIGlucC5kYXRhc2V0LmgyaHJvdyA9IGk7IGlucC5kYXRhc2V0LmgyaGNvbCA9IGo7CiAgICAgIHRkLmFwcGVuZENoaWxkKGlucCk7IHRyLmFwcGVuZENoaWxkKHRkKTsKICAgIH0KICAgIHRhYmVsYS5hcHBlbmRDaGlsZCh0cik7CiAgfQp9CgovLyDilIDilIAgQ8OBTENVTE8g4pSA4pSACmZ1bmN0aW9uIHByb2JQcm9mKHRvdGFpcywgb3ZlcikgewogIGNvbnN0IG1lZGlhID0gdG90YWlzLnJlZHVjZSgoYSxiKT0+YStiLDApL3RvdGFpcy5sZW5ndGg7CiAgY29uc3QgdmFyciAgPSB0b3RhaXMucmVkdWNlKChhLGIpPT5hKyhiLW1lZGlhKSoqMiwwKS90b3RhaXMubGVuZ3RoOwogIGNvbnN0IHogPSAobWVkaWEgLSBvdmVyKSAvIChNYXRoLnNxcnQodmFycikgfHwgMSk7CiAgcmV0dXJuICgxLygxK01hdGguZXhwKC16KSkpKjEwMDsKfQoKZnVuY3Rpb24gbGVpdHVyYShtZWRpYUMsIGFyYiwgY3R4LCBhcmJNZWRpYSkgewogIGNvbnN0IGYxID0gbWVkaWFDIC8gMzsKICBjb25zdCBmQXJiID0gYXJiTWVkaWEgPiAwID8gYXJiTWVkaWEvNCA6IGFyYi83OwogIGNvbnN0IGYzID0gY3R4PT09MiA/IDEuMiA6IGN0eD09PTEgPyAxLjEgOiAxOwogIGNvbnN0IHNjb3JlID0gZjEgKiBmQXJiICogZjM7CiAgaWYgKHNjb3JlID49IDIpICAgcmV0dXJuICdKT0dPIFFVRU5URSDwn5+lJzsKICBpZiAoc2NvcmUgPj0gMS40KSByZXR1cm4gJ0JPTSBPVkVSIENBUlTDlUVTIOKchSc7CiAgaWYgKHNjb3JlID49IDEpICAgcmV0dXJuICdNw4lESU8g4pqg77iPJzsKICByZXR1cm4gJ1RFTkTDik5DSUEgVU5ERVIg4p2MJzsKfQoKZnVuY3Rpb24gY2FsY3VsYXIoKSB7CiAgY29uc3QgbiAgID0gcGFyc2VJbnQoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ251bUpvZ29zJykudmFsdWUpOwogIGNvbnN0IG92ZXI9IHBhcnNlRmxvYXQoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ292ZXJMaW5oYScpLnZhbHVlKTsKICBjb25zdCBvZGQgPSBwYXJzZUZsb2F0KGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdvZGQnKS52YWx1ZSk7CiAgY29uc3QgYXJiID0gcGFyc2VGbG9hdChkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbWVkaWFBcmJpdHJvJykudmFsdWUpOwogIGNvbnN0IGFyYk1lZGlhID0gcGFyc2VGbG9hdChkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnYXJiTWVkaWFDYXJ0b2VzJykudmFsdWUpIHx8IDA7CiAgY29uc3Qgbm9tZUFyYiAgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbm9tZUFyYml0cm8nKS52YWx1ZS50cmltKCk7CiAgY29uc3QgY3R4ID0gcGFyc2VJbnQoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvbnRleHRvJykudmFsdWUpOwoKICAvLyBoaW50IMOhcmJpdHJvCiAgY29uc3QgaGludCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdhcmJIaW50Jyk7CiAgaWYgKGFyYk1lZGlhID4gMCkgewogICAgY29uc3Qgbml2ZWwgPSBhcmJNZWRpYSA+PSA1ID8gJ/Cfn6UgUmlnb3Jvc28nIDogYXJiTWVkaWEgPj0gMyA/ICfwn5+oIE1vZGVyYWRvJyA6ICfwn5+pIFBlcm1pc3Npdm8nOwogICAgaGludC50ZXh0Q29udGVudCA9IChub21lQXJiID8gbm9tZUFyYiArICcgwrcgJyA6ICcnKSArIG5pdmVsICsgJyDCtyAnICsgYXJiTWVkaWEudG9GaXhlZCgxKSArICcgY2FydC9qb2dvJzsKICB9IGVsc2UgewogICAgaGludC50ZXh0Q29udGVudCA9IG5vbWVBcmIgPyAn8J+RpCAnICsgbm9tZUFyYiA6ICdQcmVlbmNoYSBwYXJhIGFuw6FsaXNlIG1haXMgcHJlY2lzYSc7CiAgfQoKICBjb25zdCB0MT1bXSx0Mj1bXSx0b3RhaXM9W107CiAgZm9yIChsZXQgaj0xO2o8PW47aisrKXsKICAgIGNvbnN0IHYxPU51bWJlcihkb2N1bWVudC5xdWVyeVNlbGVjdG9yKGBbZGF0YS1yb3c9IjEiXVtkYXRhLWNvbD0iJHtqfSJdYCk/LnZhbHVlfHwwKTsKICAgIGNvbnN0IHYyPU51bWJlcihkb2N1bWVudC5xdWVyeVNlbGVjdG9yKGBbZGF0YS1yb3c9IjIiXVtkYXRhLWNvbD0iJHtqfSJdYCk/LnZhbHVlfHwwKTsKICAgIHQxLnB1c2godjEpOyB0Mi5wdXNoKHYyKTsgdG90YWlzLnB1c2godjErdjIpOwogIH0KCiAgLy8gQ29uZnJvbnRvcyBkaXJldG9zIChIMkgpIOKAlCBlbnRyYW0gbm8gY8OhbGN1bG8gZ2VyYWwgcGFyYSBkZWl4YXIgYSBlc3RpbWF0aXZhIG1haXMgcHJlY2lzYQogIGNvbnN0IGgyaFQxPVtdLCBoMmhUMj1bXSwgaDJoVG90YWlzPVtdOwogIGZvciAobGV0IGo9MTtqPD01O2orKyl7CiAgICBjb25zdCBjMSA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoYFtkYXRhLWgyaHJvdz0iMSJdW2RhdGEtaDJoY29sPSIke2p9Il1gKTsKICAgIGNvbnN0IGMyID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcihgW2RhdGEtaDJocm93PSIyIl1bZGF0YS1oMmhjb2w9IiR7an0iXWApOwogICAgY29uc3QgcmF3MSA9IGMxID8gYzEudmFsdWUgOiAnJzsKICAgIGNvbnN0IHJhdzIgPSBjMiA/IGMyLnZhbHVlIDogJyc7CiAgICBpZiAocmF3MSAhPT0gJycgfHwgcmF3MiAhPT0gJycpIHsKICAgICAgY29uc3QgdjEgPSBOdW1iZXIocmF3MXx8MCksIHYyID0gTnVtYmVyKHJhdzJ8fDApOwogICAgICBoMmhUMS5wdXNoKHYxKTsgaDJoVDIucHVzaCh2Mik7IGgyaFRvdGFpcy5wdXNoKHYxK3YyKTsKICAgIH0KICB9CiAgY29uc3QgdG90YWlzQ29tYm8gPSB0b3RhaXMuY29uY2F0KGgyaFRvdGFpcyk7CiAgY29uc3QgdDFDb21ibyA9IHQxLmNvbmNhdChoMmhUMSk7CiAgY29uc3QgdDJDb21ibyA9IHQyLmNvbmNhdChoMmhUMik7CgogIGNvbnN0IG1lZGlhICA9IHRvdGFpc0NvbWJvLnJlZHVjZSgoYSxiKT0+YStiLDApL3RvdGFpc0NvbWJvLmxlbmd0aDsKICBjb25zdCBtZWRpYVQxPSB0MUNvbWJvLnJlZHVjZSgoYSxiKT0+YStiLDApL3QxQ29tYm8ubGVuZ3RoOwogIGNvbnN0IG1lZGlhVDI9IHQyQ29tYm8ucmVkdWNlKChhLGIpPT5hK2IsMCkvdDJDb21iby5sZW5ndGg7CiAgY29uc3QgblQxID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RpbWUxJykudmFsdWUgfHwgJ1RpbWUgMSc7CiAgY29uc3QgblQyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RpbWUyJykudmFsdWUgfHwgJ1RpbWUgMic7CgogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdtZWRpYScpLnRleHRDb250ZW50ICAgID0gbWVkaWEudG9GaXhlZCgyKTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbWVkaWFUMScpLnRleHRDb250ZW50ICA9IG1lZGlhVDEudG9GaXhlZCgyKTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbWVkaWFUMicpLnRleHRDb250ZW50ICA9IG1lZGlhVDIudG9GaXhlZCgyKTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGFiZWwtdDEnKS50ZXh0Q29udGVudCA9ICdNw6lkaWEgJyArIG5UMTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGFiZWwtdDInKS50ZXh0Q29udGVudCA9ICdNw6lkaWEgJyArIG5UMjsKCiAgY29uc3QgcHJvYiA9IHByb2JQcm9mKHRvdGFpc0NvbWJvLCBvdmVyKTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncHJvYicpLnRleHRDb250ZW50ICAgICA9IHByb2IudG9GaXhlZCgxKSsnJSc7CiAgY29uc3Qgb2ogPSAxLyhwcm9iLzEwMCk7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ29kZEp1c3RhJykudGV4dENvbnRlbnQgPSBvai50b0ZpeGVkKDIpOwoKICBjb25zdCBldiA9IChwcm9iLzEwMCpvZGQpLTE7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2V2JykudGV4dENvbnRlbnQgICAgPSAoZXY+PTA/JysnOicnKStldi50b0ZpeGVkKDMpOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdldkJpZycpLnRleHRDb250ZW50ID0gKGV2Pj0wPycrJzonJykrZXYudG9GaXhlZCgyKTsKCiAgY29uc3QgbGVpdHVyYVQgPSBsZWl0dXJhKG1lZGlhLCBhcmIsIGN0eCwgYXJiTWVkaWEpOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsZWl0dXJhJykudGV4dENvbnRlbnQgPSBsZWl0dXJhVDsKCiAgY29uc3QgYmFubmVyICAgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHVzQmFubmVyJyk7CiAgY29uc3Qgc3RhdHVzRWwgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHVzJyk7CiAgYmFubmVyLmNsYXNzTmFtZSA9ICdzdGF0dXMtYmFubmVyJzsKICBpZiAoZXYgPiAwLjEpICAgICAgIHsgc3RhdHVzRWwudGV4dENvbnRlbnQ9J0VOVFJBREEgRk9SVEUnOyBiYW5uZXIuY2xhc3NMaXN0LmFkZCgnZ29vZCcpOyB9CiAgZWxzZSBpZiAoZXYgPiAwKSAgICB7IHN0YXR1c0VsLnRleHRDb250ZW50PSdURU0gVkFMT1InOyAgICAgYmFubmVyLmNsYXNzTGlzdC5hZGQoJ2dvb2QnKTsgfQogIGVsc2UgaWYgKGV2ID4gLTAuMDUpeyBzdGF0dXNFbC50ZXh0Q29udGVudD0nTkVVVFJPJzsgICAgICAgIGJhbm5lci5jbGFzc0xpc3QuYWRkKCdtZWRpdW0nKTsgfQogIGVsc2UgICAgICAgICAgICAgICAgeyBzdGF0dXNFbC50ZXh0Q29udGVudD0nRVZJVEFSJzsgICAgICAgIGJhbm5lci5jbGFzc0xpc3QuYWRkKCdiYWQnKTsgfQoKICBjb25zdCBoMmhDYXJkID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2gyaENhcmQnKTsKICBpZiAoaDJoVG90YWlzLmxlbmd0aCA+IDApIHsKICAgIGNvbnN0IG1lZGlhSDJIID0gaDJoVG90YWlzLnJlZHVjZSgoYSxiKT0+YStiLDApL2gyaFRvdGFpcy5sZW5ndGg7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbWVkaWFIMkgnKS50ZXh0Q29udGVudCA9IG1lZGlhSDJILnRvRml4ZWQoMik7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnam9nb3NIMkgnKS50ZXh0Q29udGVudCA9IGgyaFRvdGFpcy5sZW5ndGg7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnaDJoSGludCcpLnRleHRDb250ZW50ID0gJ0luY2x1w61kb3Mgbm8gY8OhbGN1bG8gYWNpbWEg4oCUICcgKyBoMmhUb3RhaXMubGVuZ3RoICsgJyBkZSAnICsgdG90YWlzQ29tYm8ubGVuZ3RoICsgJyBqb2dvcyBjb25zaWRlcmFkb3MgbmEgbcOpZGlhIGZpbmFsLic7CiAgICBoMmhDYXJkLnN0eWxlLmRpc3BsYXkgPSAnJzsKICB9IGVsc2UgewogICAgaDJoQ2FyZC5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOwogIH0KCiAgYXR1YWxpemFyR3JhZmljbyh0MSwgdDIsIHRvdGFpcywgb3ZlciwgbWVkaWEpOwp9CgpmdW5jdGlvbiBhdHVhbGl6YXJHcmFmaWNvKHQxLCB0MiwgdG90YWlzLCBvdmVyLCBtZWRpYSkgewogIGNvbnN0IGxhYmVscyA9IHQxLm1hcCgoXyxpKT0+J0onKyhpKzEpKTsKICBpZiAoY2hhcnQpIGNoYXJ0LmRlc3Ryb3koKTsKICBjaGFydCA9IG5ldyBDaGFydChkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZ3JhZmljbycpLCB7CiAgICBkYXRhOiB7IGxhYmVscywgZGF0YXNldHM6WwogICAgICB7IHR5cGU6J2JhcicsICBsYWJlbDonVG90YWwnLCAgICAgICBkYXRhOnRvdGFpcywgYmFja2dyb3VuZENvbG9yOidyZ2JhKDEyLDEwNyw5NCwwLjE4KScsIGJvcmRlckNvbG9yOidyZ2JhKDEyLDEwNyw5NCwwLjcpJywgYm9yZGVyV2lkdGg6MSwgYm9yZGVyUmFkaXVzOjMsIG9yZGVyOjMgfSwKICAgICAgeyB0eXBlOidsaW5lJywgbGFiZWw6J1RpbWUgMScsICAgICAgZGF0YTp0MSwgYm9yZGVyQ29sb3I6JyMwYWYnLCBiYWNrZ3JvdW5kQ29sb3I6J3RyYW5zcGFyZW50JywgYm9yZGVyV2lkdGg6MiwgcG9pbnRSYWRpdXM6MywgcG9pbnRCYWNrZ3JvdW5kQ29sb3I6JyMwYWYnLCB0ZW5zaW9uOjAuMywgb3JkZXI6MiB9LAogICAgICB7IHR5cGU6J2xpbmUnLCBsYWJlbDonVGltZSAyJywgICAgICBkYXRhOnQyLCBib3JkZXJDb2xvcjonIzdjNWNiZicsIGJhY2tncm91bmRDb2xvcjondHJhbnNwYXJlbnQnLCBib3JkZXJXaWR0aDoyLCBwb2ludFJhZGl1czozLCBwb2ludEJhY2tncm91bmRDb2xvcjonIzdjNWNiZicsIHRlbnNpb246MC4zLCBvcmRlcjoyIH0sCiAgICAgIHsgdHlwZTonbGluZScsIGxhYmVsOidNw6lkaWEnLCAgICAgICBkYXRhOm5ldyBBcnJheShsYWJlbHMubGVuZ3RoKS5maWxsKHBhcnNlRmxvYXQobWVkaWEudG9GaXhlZCgyKSkpLCBib3JkZXJDb2xvcjoncmdiYSgyOCw0MywzOSwwLjMpJywgYm9yZGVyRGFzaDpbNCw0XSwgYmFja2dyb3VuZENvbG9yOid0cmFuc3BhcmVudCcsIGJvcmRlcldpZHRoOjEuNSwgcG9pbnRSYWRpdXM6MCwgb3JkZXI6MSB9LAogICAgICB7IHR5cGU6J2xpbmUnLCBsYWJlbDonTGluaGEgT3ZlcicsICBkYXRhOm5ldyBBcnJheShsYWJlbHMubGVuZ3RoKS5maWxsKG92ZXIpLCBib3JkZXJDb2xvcjoncmdiYSgxODAsODMsOSwwLjcpJywgYm9yZGVyRGFzaDpbNiwzXSwgYmFja2dyb3VuZENvbG9yOid0cmFuc3BhcmVudCcsIGJvcmRlcldpZHRoOjEuNSwgcG9pbnRSYWRpdXM6MCwgb3JkZXI6MSB9CiAgICBdfSwKICAgIG9wdGlvbnM6ewogICAgICByZXNwb25zaXZlOnRydWUsIG1haW50YWluQXNwZWN0UmF0aW86ZmFsc2UsCiAgICAgIHBsdWdpbnM6ewogICAgICAgIGxlZ2VuZDp7IGxhYmVsczp7IGNvbG9yOicjNGY2YjY1JywgZm9udDp7ZmFtaWx5OiInSUJNIFBsZXggTW9ubyciLHNpemU6MTB9LCBib3hXaWR0aDoxMCwgcGFkZGluZzoxMiB9fSwKICAgICAgICB0b29sdGlwOnsgYmFja2dyb3VuZENvbG9yOicjMWMyYjI3JywgYm9yZGVyQ29sb3I6J3JnYmEoMjgsNDMsMzksMC4xKScsIGJvcmRlcldpZHRoOjEsIHRpdGxlQ29sb3I6JyNlZWYzZjEnLCBib2R5Q29sb3I6JyNjOWQ2ZDInLCB0aXRsZUZvbnQ6e2ZhbWlseToiJ0lCTSBQbGV4IE1vbm8nIixzaXplOjExfSwgYm9keUZvbnQ6e2ZhbWlseToiJ0lCTSBQbGV4IE1vbm8nIixzaXplOjEwfSB9CiAgICAgIH0sCiAgICAgIHNjYWxlczp7CiAgICAgICAgeDp7IGdyaWQ6e2NvbG9yOidyZ2JhKDI4LDQzLDM5LDAuMDgpJ30sIHRpY2tzOntjb2xvcjonIzRmNmI2NScsZm9udDp7ZmFtaWx5OiInSUJNIFBsZXggTW9ubyciLHNpemU6MTB9fSB9LAogICAgICAgIHk6eyBncmlkOntjb2xvcjoncmdiYSgyOCw0MywzOSwwLjA4KSd9LCB0aWNrczp7Y29sb3I6JyM0ZjZiNjUnLGZvbnQ6e2ZhbWlseToiJ0lCTSBQbGV4IE1vbm8nIixzaXplOjEwfX0gfQogICAgICB9CiAgICB9CiAgfSk7Cn0KCi8vIOKUgOKUgCBTQUxWQVIg4pSA4pSACmZ1bmN0aW9uIHNhbHZhckFuYWxpc2UoKSB7CiAgY29uc3QgdGltZTEgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndGltZTEnKS52YWx1ZSB8fCAnVGltZSAxJzsKICBjb25zdCB0aW1lMiA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0aW1lMicpLnZhbHVlIHx8ICdUaW1lIDInOwogIGNvbnN0IG1lZGlhICA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdtZWRpYScpLnRleHRDb250ZW50OwogIGlmIChtZWRpYSA9PT0gJ+KAlCcpIHsgdG9hc3QoJ+KaoO+4jyBQcmVlbmNoYSBvcyBkYWRvcyBhbnRlcyBkZSBzYWx2YXInKTsgcmV0dXJuOyB9CgogIGNvbnN0IGJhbm5lciA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0dXNCYW5uZXInKTsKICBjb25zdCBjbHMgPSBiYW5uZXIuY2xhc3NMaXN0LmNvbnRhaW5zKCdnb29kJykgPyAnZ29vZCcgOiBiYW5uZXIuY2xhc3NMaXN0LmNvbnRhaW5zKCdtZWRpdW0nKSA/ICdtZWRpdW0nIDogJ2JhZCc7CgogIGNvbnN0IGEgPSB7CiAgICBpZDogRGF0ZS5ub3coKSwKICAgIHBhcnRpZGE6IHRpbWUxICsgJyDDlyAnICsgdGltZTIsCiAgICBhcmJpdHJvOiBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbm9tZUFyYml0cm8nKS52YWx1ZS50cmltKCkgfHwgbnVsbCwKICAgIG1lZGlhLAogICAgbGluaGE6ICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdvdmVyTGluaGEnKS52YWx1ZSB8fCAn4oCUJywKICAgIG9kZDogICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb2RkJykudmFsdWUgfHwgJ+KAlCcsCiAgICBwcm9iOiAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2InKS50ZXh0Q29udGVudCwKICAgIGV2OiAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZXYnKS50ZXh0Q29udGVudCwKICAgIG9qOiAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb2RkSnVzdGEnKS50ZXh0Q29udGVudCwKICAgIHN0YXR1czogICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHVzJykudGV4dENvbnRlbnQsCiAgICBsZWl0dXJhOiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xlaXR1cmEnKS50ZXh0Q29udGVudCwKICAgIGNscywKICAgIGhvcmE6IG5ldyBEYXRlKCkudG9Mb2NhbGVTdHJpbmcoJ3B0LUJSJyx7ZGF5OicyLWRpZ2l0Jyxtb250aDonMi1kaWdpdCcsaG91cjonMi1kaWdpdCcsbWludXRlOicyLWRpZ2l0J30pCiAgfTsKCiAgYW5hbGlzZXMudW5zaGlmdChhKTsKICB0cnkgeyBsb2NhbFN0b3JhZ2Uuc2V0SXRlbSgnYmV0X2FuYWxpc2VzJywgSlNPTi5zdHJpbmdpZnkoYW5hbGlzZXMpKTsgfSBjYXRjaChlKXt9CiAgcmVuZGVySGlzdG9yaWNvKCk7CiAgdG9hc3QoJ+KchSBBbsOhbGlzZSBzYWx2YSEnKTsKfQoKZnVuY3Rpb24gbWFyY2FyUmVzdWx0YWRvKGlkLCByZXN1bHRhZG8pIHsKICBhbmFsaXNlcyA9IGFuYWxpc2VzLm1hcChhID0+IGEuaWQgPT09IGlkID8geyAuLi5hLCByZXN1bHRhZG8gfSA6IGEpOwogIHRyeSB7IGxvY2FsU3RvcmFnZS5zZXRJdGVtKCdiZXRfYW5hbGlzZXMnLCBKU09OLnN0cmluZ2lmeShhbmFsaXNlcykpOyB9IGNhdGNoKGUpe30KICByZW5kZXJIaXN0b3JpY28oKTsKICB0b2FzdChyZXN1bHRhZG8gPT09ICd3aW4nID8gJ+KchSBNYXJjYWRvIGNvbW8gQWNlcnRvdSEnIDogJ+KdjCBNYXJjYWRvIGNvbW8gRXJyb3UhJyk7Cn0KCmZ1bmN0aW9uIGRlbGV0YXJBbmFsaXNlKGlkKSB7CiAgYW5hbGlzZXMgPSBhbmFsaXNlcy5maWx0ZXIoYSA9PiBhLmlkICE9PSBpZCk7CiAgdHJ5IHsgbG9jYWxTdG9yYWdlLnNldEl0ZW0oJ2JldF9hbmFsaXNlcycsIEpTT04uc3RyaW5naWZ5KGFuYWxpc2VzKSk7IH0gY2F0Y2goZSl7fQogIHJlbmRlckhpc3RvcmljbygpOwp9CgpmdW5jdGlvbiBsaW1wYXJIaXN0b3JpY28oKSB7CiAgYW5hbGlzZXMgPSBbXTsKICB0cnkgeyBsb2NhbFN0b3JhZ2UucmVtb3ZlSXRlbSgnYmV0X2FuYWxpc2VzJyk7IH0gY2F0Y2goZSl7fQogIHJlbmRlckhpc3RvcmljbygpOwp9CgpmdW5jdGlvbiByZW5kZXJIaXN0b3JpY28oKSB7CiAgY29uc3QgbGlzdGEgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGlzdGFBbmFsaXNlcycpOwogIGlmIChhbmFsaXNlcy5sZW5ndGggPT09IDApIHsKICAgIGxpc3RhLmlubmVySFRNTCA9IGA8ZGl2IGNsYXNzPSJlbXB0eSI+PGRpdiBjbGFzcz0iZW1wdHktaWNvbiI+8J+TrTwvZGl2Pk5lbmh1bWEgYW7DoWxpc2Ugc2FsdmEgYWluZGE8L2Rpdj5gOwogICAgcmV0dXJuOwogIH0KICBsaXN0YS5pbm5lckhUTUwgPSBhbmFsaXNlcy5tYXAoYSA9PiB7CiAgICBjb25zdCByZXN1bHRMYWJlbCA9IGEucmVzdWx0YWRvID09PSAnd2luJwogICAgICA/IGA8c3BhbiBjbGFzcz0iYWMtcmVzdWx0LWxhYmVsIHdpbiI+4pyFIEFDRVJUT1U8L3NwYW4+YAogICAgICA6IGEucmVzdWx0YWRvID09PSAnbG9zcycKICAgICAgPyBgPHNwYW4gY2xhc3M9ImFjLXJlc3VsdC1sYWJlbCBsb3NzIj7inYwgRVJST1U8L3NwYW4+YAogICAgICA6ICcnOwogICAgcmV0dXJuIGAKICAgIDxkaXYgY2xhc3M9ImFuYWxpc2UtY2FyZCI+CiAgICAgIDxkaXYgY2xhc3M9ImFjLWhlYWRlciI+CiAgICAgICAgPGRpdiBjbGFzcz0iYWMtcGFydGlkYSI+JHthLnBhcnRpZGF9PC9kaXY+CiAgICAgICAgPHNwYW4gY2xhc3M9ImFjLXN0YXR1cyAke2EuY2xzfSI+JHthLnN0YXR1c308L3NwYW4+CiAgICAgIDwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJhYy1tZXRhIj4KICAgICAgICA8c3Bhbj7wn5OFICR7YS5ob3JhfTwvc3Bhbj4KICAgICAgICAke2EuYXJiaXRybyA/IGA8c3Bhbj7wn5GkICR7YS5hcmJpdHJvfTwvc3Bhbj5gIDogJyd9CiAgICAgICAgPHNwYW4+8J+TiiAke2EubWVkaWF9PC9zcGFuPgogICAgICAgIDxzcGFuPvCfk4ggTGluaGEgJHthLmxpbmhhID8/ICfigJQnfTwvc3Bhbj4KICAgICAgICA8c3Bhbj7wn46yIE9kZCAke2Eub2RkID8/ICfigJQnfTwvc3Bhbj4KICAgICAgICA8c3Bhbj7wn46vICR7YS5wcm9ifTwvc3Bhbj4KICAgICAgICA8c3Bhbj7wn5KwIEVWICR7YS5ldn08L3NwYW4+CiAgICAgICAgPHNwYW4+8J+TkCAke2Eub2p9PC9zcGFuPgogICAgICA8L2Rpdj4KICAgICAgPGRpdiBjbGFzcz0iYWMtbGVpdHVyYSI+JHthLmxlaXR1cmF9PC9kaXY+CiAgICAgIDxkaXYgY2xhc3M9ImFjLWZvb3RlciI+CiAgICAgICAgPGRpdiBjbGFzcz0iYWMtcmVzdWx0LWJ0bnMiPgogICAgICAgICAgJHtyZXN1bHRMYWJlbCB8fCBgCiAgICAgICAgICAgIDxidXR0b24gY2xhc3M9ImFjLXJlc3VsdC1idG4gd2luJHthLnJlc3VsdGFkbz09PSd3aW4nPycgYWN0aXZlJzonJ30iIG9uY2xpY2s9Im1hcmNhclJlc3VsdGFkbygke2EuaWR9LCd3aW4nKSI+4pyFIEFjZXJ0b3U8L2J1dHRvbj4KICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0iYWMtcmVzdWx0LWJ0biBsb3NzJHthLnJlc3VsdGFkbz09PSdsb3NzJz8nIGFjdGl2ZSc6Jyd9IiBvbmNsaWNrPSJtYXJjYXJSZXN1bHRhZG8oJHthLmlkfSwnbG9zcycpIj7inYwgRXJyb3U8L2J1dHRvbj4KICAgICAgICAgIGB9CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGJ1dHRvbiBjbGFzcz0iYWMtZGVsIiBvbmNsaWNrPSJkZWxldGFyQW5hbGlzZSgke2EuaWR9KSI+UmVtb3ZlcjwvYnV0dG9uPgogICAgICA8L2Rpdj4KICAgIDwvZGl2PgogIGA7CiAgfSkuam9pbignJyk7Cn0KCnJlbmRlckhpc3RvcmljbygpOwpnZXJhclRhYmVsYSgpOwo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+Cg==";
-function carregarBetAnalyzer() {
-  const f = document.getElementById('ba-frame');
-  if (!f || f.dataset.loaded === '1') return;
-  try {
-    const bin = atob(BA_SRC_B64);
-    const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
-    f.srcdoc = new TextDecoder('utf-8').decode(bytes);
-    f.dataset.loaded = '1';
-  } catch (e) {
-    f.srcdoc = '<p style="font-family:sans-serif;color:#888;padding:20px">Não foi possível carregar o Bet Analyzer.</p>';
+function add(r){
+  if(lockState())return;
+  var d=new Date();
+  ents().push({r:r,t:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
+  save();render();
+}
+var OPEN={};
+function detail(k){
+  if(!OPEN[k])return "";
+  var c=S.cfg,h=S.days[k].map(function(x,i){
+    var g=x.r==="gain";
+    return "<div style='display:flex;justify-content:space-between;gap:8px;padding:4px 0'><span>Tentativa "+(i+1)+" · "+x.t+" · <b class='"+(g?"pos":"neg")+"'>"+(g?"GAIN":"LOSS")+"</b></span><span class='"+(g?"pos":"neg")+"'>"+(g?"+"+brl(val(c.gain)):brl(-val(c.loss)))+"</span></div>";
+  }).join("");
+  return "<tr class='det'><td colspan='4' style='background:var(--bg);font-size:14px'>"+h+"</td></tr>";
+}
+function pb(v,base,sg){if(!(base>0))return "—";var t=Math.abs(v/base*100).toFixed(2).replace(".",",")+"%";return (v<0?"-":(sg&&v>0?"+":""))+t}
+function bank(){
+  var b=S.banca||0,past=0,k,c=S.cfg;
+  for(k in S.days){if(k!==cur)past+=pnl(S.days[k])}
+  var open=b+past,day=pnl(ents()),atual=open+day,acc=past+day;
+  var bv=document.getElementById("bkv");
+  if(b>0){bv.textContent=brl(atual);bv.className="bkv "+(acc>0?"pos":acc<0?"neg":"")}
+  else{bv.textContent="Definir banca";bv.className="bkv"}
+  document.getElementById("pill").textContent=bv.textContent;
+  function t(l,v,cl,x){return '<div class="tile"><small>'+l+'</small><b class="'+cl+'">'+v+'</b>'+(x?'<small>'+x+'</small>':'')+'</div>'}
+  document.getElementById("bkcalc").innerHTML=
+    t("Banca atual",b>0?brl(atual):"—",acc>0?"pos":acc<0?"neg":"")+
+    t("Acumulado",b>0?brl(acc):"—",acc>0?"pos":acc<0?"neg":"",pb(acc,b,true)+" sobre a inicial")+
+    t("Hoje",pb(day,open,true),day>0?"pos":day<0?"neg":"","sobre a banca de abertura")+
+    t("Risco por operação",pb(val(c.loss),open,false),"","Perda máx. dia: "+pb(c.perdaMax,open,false));
+}
+function fp(v){return (Math.round(v*10)/10).toString().replace(".",",")+"%"}
+function rate(){
+  var w=0,l=0,k,c=S.cfg;
+  for(k in S.days)S.days[k].forEach(function(x){x.r==="gain"?w++:l++});
+  var n=w+l,lim=c.loss/(c.gain+c.loss)*100,pct=n?w/n*100:0,ok=n&&pct>=lim;
+  var chip=n?'<span class="chip '+(ok?"ok":"no")+'">'+(ok?"Acima do limite":"Abaixo do limite")+'</span>':'<span class="chip" style="background:var(--line);color:var(--mut)">Sem entradas</span>';
+  document.getElementById("tx").innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center"><strong>Taxa de acerto</strong>'+chip+'</div>'+
+    '<div class="pnl '+(n?(ok?"pos":"neg"):"")+'" style="font-size:30px;margin-top:6px">'+(n?fp(pct):"—")+'</div>'+
+    '<div class="bar"><i class="'+(n&&!ok?"bad":"")+'" style="width:'+Math.min(pct,100)+'%"></i><u style="left:'+Math.min(lim,100)+'%" data-l="Limite '+fp(lim)+'"></u></div>'+
+    '<div class="sub" style="margin:0">'+w+' gain · '+l+' loss · '+n+' entrada'+(n===1?"":"s")+'</div>';
+}
+function render(){
+  if(today()!==cur){cur=today()}
+  var e=ents(),p=pnl(e),lk=lockState(),c=S.cfg;
+  document.getElementById("plano").innerHTML=
+    '<div class="tile"><small>Ganho</small><b class="big">'+c.gain+' pts</b><b class="val pos">+'+brl(val(c.gain))+'</b></div>'+
+    '<div class="tile"><small>Perda</small><b class="big">'+c.loss+' pts</b><b class="val neg">'+brl(-val(c.loss))+'</b></div>'+
+    '<div class="tile"><small>Contratos</small><b class="big">'+c.contratos+'</b><b class="val" style="color:var(--mut)">WIN</b></div>';
+  document.getElementById("calc").innerHTML='<div class="tile"><small>Ganho por operação</small><b class="pos">+'+brl(val(c.gain))+'</b></div><div class="tile"><small>Perda por operação</small><b class="neg">'+brl(-val(c.loss))+'</b></div>';
+  bank();
+  rate();
+  var st=document.getElementById("status");
+  if(lk){st.className="status lk";st.innerHTML="<b>Profit travado</b><span>"+lk+"</span>"}
+  else{st.className="status ok";var n=e.length+1;
+    st.innerHTML="<b>Liberado para operar</b><span>Tentativa "+n+" de "+c.tentativas+". Ainda pode perder "+brl(c.perdaMax+p)+" hoje.</span>"}
+  var pe=document.getElementById("pnl");pe.textContent=brl(p);pe.className="pnl "+(p>0?"pos":p<0?"neg":"");
+  var h="";
+  for(var i=0;i<c.tentativas;i++){
+    var x=e[i];
+    if(x)h+='<div class="slot '+(x.r==="gain"?"g":"l")+'"><small>Tentativa '+(i+1)+' · '+x.t+'</small><strong>'+(x.r==="gain"?"+"+brl(val(c.gain)):brl(-val(c.loss)))+'</strong></div>';
+    else h+='<div class="slot'+(!lk&&i===e.length?" next":"")+'"><small>Tentativa '+(i+1)+'</small>'+(lk?"Não usada":i===e.length?"Próxima":"Aguardando")+'</div>';
   }
+  document.getElementById("slots").innerHTML=h;
+  document.getElementById("bg").disabled=!!lk;
+  document.getElementById("bl").disabled=!!lk;
+  document.getElementById("undo").disabled=!e.length;
+  var days=Object.keys(S.days).filter(function(k){return S.days[k].length}).sort().reverse().slice(0,10);
+  var tb=days.map(function(k){var v=pnl(S.days[k]);return "<tr data-d='"+k+"' style='cursor:pointer'><td>"+k.split("-").reverse().join("/")+"</td><td>"+S.days[k].length+(S.days[k].length>1?" entradas":" entrada")+"</td><td class='"+(v>0?"pos":v<0?"neg":"")+"'>"+brl(v)+"</td><td><button class='del' data-del='"+k+"' aria-label='Apagar dia'>Apagar</button></td></tr>"+detail(k)}).join("");
+  document.querySelector("#hist tbody").innerHTML=tb||"<tr><td>Nenhuma entrada registrada ainda.</td></tr>";
 }
-
-// ─── TEMA DE CORES ─────────────────────────
-const THEME_KEY = 'xgols_theme';
-const THEME_META_COLOR = { dark: '#05080f', berger: '#eef3f1' };
-
-function applyTheme(name) {
-  name = name === 'berger' ? 'berger' : 'dark';
-  document.documentElement.setAttribute('data-theme', name);
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', THEME_META_COLOR[name]);
-  document.querySelectorAll('.theme-option').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.themeValue === name);
-  });
+function buildCfg(){
+  var f=[["contratos","Contratos","unidades"],["gain","Ganho","pontos"],["loss","Perda","pontos"],["tentativas","Tentativas","por dia"],["perdaMax","Perda máxima diária","R$"]];
+  var g=document.getElementById("cfg");
+  g.innerHTML=f.map(function(x){return '<label class="prm"><span>'+x[1]+'<small>'+x[2]+'</small></span><input type="number" inputmode="decimal" min="1" step="any" data-k="'+x[0]+'" value="'+S.cfg[x[0]]+'"></label>'}).join("");
+  g.addEventListener("change",function(ev){var k=ev.target.dataset.k,v=parseFloat(ev.target.value);if(k&&v>0){S.cfg[k]=v;save();render()}else if(k)ev.target.value=S.cfg[k]});
 }
-
-function setTheme(name) {
-  try { localStorage.setItem(THEME_KEY, name); } catch (e) {}
-  applyTheme(name);
-  closeThemeMenu();
+document.getElementById("bg").onclick=function(){add("gain")};
+document.getElementById("bl").onclick=function(){add("loss")};
+document.getElementById("undo").onclick=function(){ents().pop();save();render()};
+document.getElementById("reset").onclick=function(){if(ents().length)ask("Zerar as entradas de hoje? Isso também destrava o Profit no controlador.",function(){S.days[cur]=[];save();render()})};
+var dlg=document.getElementById("dlg"),dcb=null;
+function ask(msg,cb){document.getElementById("dmsg").textContent=msg;dcb=cb;dlg.hidden=false}
+document.getElementById("dno").onclick=function(){dlg.hidden=true;dcb=null};
+document.getElementById("dyes").onclick=function(){dlg.hidden=true;var f=dcb;dcb=null;if(f)f()};
+function delDay(k){ask("Apagar o dia "+k.split("-").reverse().join("/")+" do histórico?",function(){delete S.days[k];save();render()})}
+var htb=document.querySelector("#hist tbody");
+htb.addEventListener("click",function(ev){var b=ev.target.closest("[data-del]");if(b){delDay(b.dataset.del);return}var tr=ev.target.closest("tr[data-d]");if(tr){OPEN[tr.dataset.d]=!OPEN[tr.dataset.d];render()}});
+htb.addEventListener("contextmenu",function(ev){ev.preventDefault();var tr=ev.target.closest("tr[data-d]");if(tr)delDay(tr.dataset.d)});
+var sheet=document.getElementById("sheet");
+document.getElementById("kebab").onclick=function(){sheet.hidden=false};
+sheet.addEventListener("click",function(ev){if(ev.target===sheet||ev.target.closest("[data-close]"))sheet.hidden=true});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape")sheet.hidden=true});
+var TABS=["entrada","historico","metrica"];
+function go(t){
+  TABS.forEach(function(n){document.getElementById("t-"+n).hidden=n!==t});
+  document.querySelectorAll(".tab").forEach(function(b){var on=b.dataset.tab===t;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
+  window.scrollTo(0,0);
 }
-
-function toggleThemeMenu() {
-  const menu = document.getElementById('themeMenu');
-  const btn = document.getElementById('themeToggle');
-  const isOpen = menu.classList.toggle('open');
-  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-}
-
-function closeThemeMenu() {
-  document.getElementById('themeMenu').classList.remove('open');
-  document.getElementById('themeToggle').setAttribute('aria-expanded', 'false');
-}
-
-document.addEventListener('click', function(e) {
-  const menu = document.getElementById('themeMenu');
-  const btn = document.getElementById('themeToggle');
-  if (!menu.contains(e.target) && !btn.contains(e.target)) closeThemeMenu();
-});
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeThemeMenu();
-});
-
-(function initTheme() {
-  let saved = 'dark';
-  try { saved = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) {}
-  applyTheme(saved);
+document.addEventListener("click",function(ev){var b=ev.target.closest("[data-tab],[data-go]");if(b)go(b.dataset.tab||b.dataset.go)});
+(function(){
+  var x0=0,y0=0,t0=0,ok=false;
+  function curTab(){for(var i=0;i<TABS.length;i++)if(!document.getElementById("t-"+TABS[i]).hidden)return i;return 0}
+  document.addEventListener("touchstart",function(ev){
+    var t=ev.touches[0];x0=t.clientX;y0=t.clientY;t0=Date.now();
+    ok=ev.touches.length===1&&!ev.target.closest("input,select,textarea,#sheet,#dlg");
+  },{passive:true});
+  document.addEventListener("touchend",function(ev){
+    if(!ok)return;ok=false;
+    var t=ev.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;
+    if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-t0>700)return;
+    var i=curTab()+(dx<0?1:-1);
+    if(i>=0&&i<TABS.length)go(TABS[i]);
+  },{passive:true});
 })();
-
-// ─── GERAR INPUTS ──────────────────────────
-for (let i = 1; i <= 10; i++) {
-  ['t1f','t2f','t1s','t2s'].forEach(id => {
-    const inp = document.createElement('input');
-    inp.id = id + i; inp.type = 'number'; inp.min = 0; inp.max = 20; inp.placeholder = '—';
-    document.getElementById(id).appendChild(inp);
-  });
-}
-for (let i = 1; i <= 5; i++) {
-  const d = document.createElement('div');
-  d.className = 'h2h-match';
-  d.innerHTML = `<span class="mlabel">J${i}</span>
-    <input type="number" id="h1_${i}" min="0" max="20" placeholder="0">
-    <span class="sep">×</span>
-    <input type="number" id="h2_${i}" min="0" max="20" placeholder="0">`;
-  document.getElementById('h2h').appendChild(d);
-}
-
-document.getElementById('time1').addEventListener('input', function() {
-  const v = this.value || 'Time 1';
-  document.getElementById('col-t1f').textContent = v;
-  document.getElementById('col-t1s').textContent = v;
-});
-document.getElementById('time2').addEventListener('input', function() {
-  const v = this.value || 'Time 2';
-  document.getElementById('col-t2f').textContent = v;
-  document.getElementById('col-t2s').textContent = v;
-});
-
-// ─── MATH ──────────────────────────────────
-function media(arr) { let s=0,c=0; arr.forEach(v => { if(!isNaN(v)){s+=v;c++;} }); return c?s/c:0; }
-function valoresValidos(arr) { return arr.filter(v => !isNaN(v) && v >= 0); }
-function fat(n) { let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
-function poisson(l,k) { return (Math.pow(l,k)*Math.exp(-l))/fat(k); }
-function over25prob(l) { return 1-(poisson(l,0)+poisson(l,1)+poisson(l,2)); }
-function colorPct(p) { return p>=70?'green':p>=55?'yellow':'red'; }
-function fmtDate(ts) {
-  return new Date(ts).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-}
-
-// ─── STATE ─────────────────────────────────
-let ultimaAnalise = null;
-
-// ─── LIMPAR NÚMEROS ────────────────────────
-function limparNumeros() {
-  if (!confirm('Limpar todos os números digitados?')) return;
-  for (let i = 1; i <= 10; i++) {
-    ['t1f','t2f','t1s','t2s'].forEach(id => {
-      const el = document.getElementById(id + i);
-      if (el) el.value = '';
-    });
-  }
-  for (let i = 1; i <= 5; i++) {
-    const a = document.getElementById('h1_' + i);
-    const b = document.getElementById('h2_' + i);
-    if (a) a.value = '';
-    if (b) b.value = '';
-  }
-  ultimaAnalise = null;
-  const btnSave = document.getElementById('btn-save');
-  if (btnSave) btnSave.disabled = true;
-  const res = document.getElementById('resultado');
-  if (res) res.style.display = 'none';
-  showToast('🧹 Números limpos!');
-}
-
-// ─── CALCULAR ──────────────────────────────
-function calcular() {
-  const t1 = document.getElementById('time1').value.trim() || 'Time 1';
-  const t2 = document.getElementById('time2').value.trim() || 'Time 2';
-  let t1f=[],t2f=[],t1s=[],t2s=[],h1=[],h2=[];
-  for(let i=1;i<=10;i++){
-    t1f.push(parseFloat(document.getElementById('t1f'+i).value));
-    t2f.push(parseFloat(document.getElementById('t2f'+i).value));
-    t1s.push(parseFloat(document.getElementById('t1s'+i).value));
-    t2s.push(parseFloat(document.getElementById('t2s'+i).value));
-  }
-  for(let i=1;i<=5;i++){
-    h1.push(parseFloat(document.getElementById('h1_'+i).value));
-    h2.push(parseFloat(document.getElementById('h2_'+i).value));
-  }
-
-  const validT1f = valoresValidos(t1f);
-  const validT2f = valoresValidos(t2f);
-  const validT1s = valoresValidos(t1s);
-  const validT2s = valoresValidos(t2s);
-  if ([validT1f, validT2f, validT1s, validT2s].some(arr => arr.length < 3)) {
-    showToast('⚠️ Preencha pelo menos 3 jogos válidos em cada coluna principal.');
-    return;
-  }
-
-  const validH1 = valoresValidos(h1);
-  const validH2 = valoresValidos(h2);
-  const m1f=media(validT1f),m2f=media(validT2f),m1s=media(validT1s),m2s=media(validT2s);
-  const h1m = media(validH1), h2m = media(validH2);
-  const usarH2H = validH1.length > 0 && validH1.length === validH2.length;
-  const pesoH2H = usarH2H ? 0.15 : 0;
-  const baseA1=(m1f+m2s)/2;
-  const baseA2=(m2f+m1s)/2;
-  const a1=baseA1*(1-pesoH2H) + h1m*pesoH2H;
-  const a2=baseA2*(1-pesoH2H) + h2m*pesoH2H;
-  const lam=a1+a2;
-  const ov=over25prob(lam)*100;
-  const bt=(1-Math.exp(-a1))*(1-Math.exp(-a2))*100;
-  const f1=m1f-m1s, f2=m2f-m2s;
-
-  let pls=[];
-  for(let g1=0;g1<=5;g1++) for(let g2=0;g2<=5;g2++)
-    pls.push({s:`${g1} × ${g2}`, p:poisson(a1,g1)*poisson(a2,g2)});
-  pls.sort((a,b)=>b.p-a.p);
-  const top3=pls.slice(0,3);
-
-  let v1=0,emp=0,v2=0;
-  pls.forEach(({s,p})=>{
-    const [g1,g2]=s.split(' × ').map(Number);
-    if(g1>g2) v1+=p; else if(g2>g1) v2+=p; else emp+=p;
-  });
-
-  let iaC,iaI,iaD,iaDesc2;
-  if(ov>70){ iaC='forte';iaI='🟢';iaD='ENTRADA FORTE';iaDesc2=`Over 2.5 com ${ov.toFixed(0)}% — mercado favorável.`; }
-  else if(ov>60){ iaC='moderada';iaI='🟡';iaD='ENTRADA MODERADA';iaDesc2=`Over 2.5 com ${ov.toFixed(0)}% — considere aguardar.`; }
-  else { iaC='evitar';iaI='🔴';iaD='EVITAR ESTA ENTRADA';iaDesc2=`Over 2.5 com apenas ${ov.toFixed(0)}% — risco elevado.`; }
-
-  ultimaAnalise = {
-    id: Date.now(), ts: Date.now(), t1, t2,
-    over25: +ov.toFixed(1), btts: +bt.toFixed(1),
-    lambda: +lam.toFixed(2), a1: +a1.toFixed(2), a2: +a2.toFixed(2),
-    m1f: +m1f.toFixed(2), m1s: +m1s.toFixed(2),
-    m2f: +m2f.toFixed(2), m2s: +m2s.toFixed(2),
-    f1: +f1.toFixed(2), f2: +f2.toFixed(2),
-    top3: top3.map(p=>({s:p.s, p:+(p.p*100).toFixed(1)})),
-    v1: +(v1*100).toFixed(1), emp: +(emp*100).toFixed(1), v2: +(v2*100).toFixed(1),
-    iaC, iaD, iaDesc2, resultado: null
-  };
-
-  // Render
-  ['rtime1','wl1'].forEach(id=>document.getElementById(id).textContent=t1);
-  ['rtime2','wl2'].forEach(id=>document.getElementById(id).textContent=t2);
-  document.getElementById('r-xg').textContent = lam.toFixed(2);
-  const ovEl=document.getElementById('r-over'); ovEl.textContent=ov.toFixed(0)+'%'; ovEl.className='stat-value '+colorPct(ov);
-  const btEl=document.getElementById('r-btts'); btEl.textContent=bt.toFixed(0)+'%'; btEl.className='stat-value '+colorPct(bt);
-
-  const topDiv=document.getElementById('r-placares'); topDiv.innerHTML='';
-  const mx=top3[0].p;
-  top3.forEach((pl,i)=>{
-    topDiv.innerHTML+=`<div class="placar-row">
-      <span class="placar-rank">${i+1}</span>
-      <span class="placar-score">${pl.s}</span>
-      <div class="placar-prob-bar"><div class="placar-prob-fill" style="width:${(pl.p/mx*100).toFixed(0)}%"></div></div>
-      <span class="placar-pct">${(pl.p*100).toFixed(1)}%</span>
-    </div>`;
-  });
-
-  const mw=Math.max(v1,v2);
-  document.getElementById('wv1').textContent=(v1*100).toFixed(1)+'%';
-  document.getElementById('wv-emp').textContent=(emp*100).toFixed(1)+'%';
-  document.getElementById('wv2').textContent=(v2*100).toFixed(1)+'%';
-  document.getElementById('wc1').className='win-cell'+(v1===mw?' highlight':'');
-  document.getElementById('wc2').className='win-cell'+(v2===mw?' highlight':'');
-
-  const ib=document.getElementById('ia-block'); ib.className='ia-block '+iaC;
-  document.getElementById('ia-decisao').textContent=iaD;
-  document.getElementById('ia-desc').textContent=iaDesc2;
-
-  // ODD — limpar campo e hint ao recalcular
-  const oddInput = document.getElementById('minha-odd');
-  oddInput.value = '';
-  document.getElementById('odd-hint').textContent = '';
-  oddInput.oninput = function() {
-    const odd = parseFloat(this.value);
-    const hint = document.getElementById('odd-hint');
-    if (!odd || odd < 1) { hint.textContent = ''; return; }
-    const prob = ov / 100;
-    const ev = (odd * prob - 1).toFixed(2);
-    const bom = parseFloat(ev) > 0;
-    hint.textContent = `EV: ${bom?'+':''}${ev}  ${bom?'✓ Valor positivo':'✗ Sem valor'}`;
-    hint.className = 'odd-result-hint ' + (bom ? 'ev-pos' : 'ev-neg');
-  };
-
-  const res=document.getElementById('resultado'); res.style.display='block';
-  document.getElementById('btn-save').disabled=false;
-  res.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-// ─── STORAGE ───────────────────────────────
-function getHist() { try { return JSON.parse(localStorage.getItem('xgols_hist')||'[]'); } catch { return []; } }
-function setHist(d) { localStorage.setItem('xgols_hist', JSON.stringify(d)); }
-
-// ─── SALVAR ANÁLISE ────────────────────────
-function salvarAnalise() {
-  if (!ultimaAnalise) return;
-  const h = getHist(); h.unshift(ultimaAnalise); setHist(h);
-  document.getElementById('btn-save').disabled = true;
-  showToast('✅ Análise salva no histórico!');
-  ultimaAnalise = null;
-}
-
-// ─── REGISTRAR RESULTADO REAL ──────────────
-function salvarResultado(id) {
-  const g1=parseInt(document.getElementById('hres1_'+id).value);
-  const g2=parseInt(document.getElementById('hres2_'+id).value);
-  if(isNaN(g1)||isNaN(g2)){showToast('⚠️ Informe o placar real!');return;}
-
-  const totalGols = g1+g2;
-  const h=getHist(); const idx=h.findIndex(x=>x.id===id); if(idx===-1) return;
-  const an = h[idx];
-
-  // Calcular acertos de cada mercado
-  const palpites = an.palpites || {};
-  const resultados = {};
-
-  // Over/Under
-  if (palpites.mercado_over) {
-    if (palpites.mercado_over === 'over25') resultados.over = totalGols > 2;
-    else if (palpites.mercado_over === 'over15') resultados.over = totalGols > 1;
-    else if (palpites.mercado_over === 'under25') resultados.over = totalGols < 3;
-    else if (palpites.mercado_over === 'under15') resultados.over = totalGols < 2;
-  }
-
-  // BTTS
-  if (palpites.mercado_btts) {
-    const bttsReal = g1>0 && g2>0;
-    resultados.btts = palpites.mercado_btts === 'sim' ? bttsReal : !bttsReal;
-  }
-
-  // Vencedor
-  if (palpites.mercado_venc) {
-    if (palpites.mercado_venc === 't1') resultados.venc = g1>g2;
-    else if (palpites.mercado_venc === 'emp') resultados.venc = g1===g2;
-    else if (palpites.mercado_venc === 't2') resultados.venc = g2>g1;
-  }
-
-  // Placar exato
-  if (palpites.placar_exato) {
-    const [pe1,pe2] = palpites.placar_exato.split('x').map(Number);
-    resultados.placar = g1===pe1 && g2===pe2;
-  }
-
-  h[idx].resultado = { g1, g2, resultados };
-  setHist(h); renderHistorico();
-
-  const total = Object.values(resultados).length;
-  const acertos = Object.values(resultados).filter(Boolean).length;
-  showToast(total ? `✅ ${acertos}/${total} palpites certos!` : '✅ Resultado registrado.');
-}
-
-// ─── DELETAR ───────────────────────────────
-function deletarItem(id) {
-  setHist(getHist().filter(h=>h.id!==id));
-  renderHistorico(); showToast('🗑 Análise removida.');
-}
-
-function limparTudo() {
-  if(!confirm('Limpar todo o histórico?')) return;
-  localStorage.removeItem('xgols_hist');
-  renderHistorico(); showToast('🗑 Histórico limpo.');
-}
-
-function toggleCard(id) { document.getElementById('hcard_'+id).classList.toggle('expanded'); }
-
-// ─── RENDER HISTÓRICO ──────────────────────
-function renderHistorico() {
-  const hist = getHist();
-  const comRes = hist.filter(h=>h.resultado!==null);
-  // acerto = pelo menos 1 palpite certo
-  const acertos = comRes.filter(h=> h.resultado && Object.values(h.resultado.resultados||{}).some(Boolean));
-  document.getElementById('gs-total').textContent = hist.length;
-  document.getElementById('gs-com-res').textContent = comRes.length;
-  document.getElementById('gs-acertos').textContent = acertos.length;
-  document.getElementById('gs-taxa').textContent = comRes.length ? Math.round(acertos.length/comRes.length*100)+'%' : '—';
-  document.getElementById('hist-count').textContent = hist.length===1?'1 análise salva':hist.length+' análises salvas';
-
-  const lista = document.getElementById('hist-lista');
-  if (!hist.length) {
-    lista.innerHTML=`<div class="hist-empty">
-      <div class="hist-empty-icon">📭</div>
-      <div class="hist-empty-title">Nenhuma análise salva</div>
-      <div class="hist-empty-desc">Faça uma análise e clique em <strong>💾 SALVAR</strong> para registrar aqui.</div>
-    </div>`; return;
-  }
-
-  lista.innerHTML = hist.map(h => {
-    const bl = h.iaC==='forte'?'FORTE':h.iaC==='moderada'?'MODERADA':'EVITAR';
-    const mw = Math.max(h.v1,h.v2);
-    const palpites = h.palpites || {};
-
-    let resBlock = '';
-    if (h.resultado) {
-      // Mostrar resultado registrado com badges por mercado
-      const res = h.resultado;
-      const r = res.resultados || {};
-      const labelOver = { over25:'Over 2.5', over15:'Over 1.5', under25:'Under 2.5', under15:'Under 1.5' };
-      const labelBtts = { sim:'BTTS Sim', nao:'BTTS Não' };
-      const labelVenc = { t1:h.t1, emp:'Empate', t2:h.t2 };
-      let badges = '';
-      if (r.over !== undefined) badges += `<span class="acerto-badge ${r.over?'hit':'miss'}">${labelOver[palpites.mercado_over]||'Over'}${palpites.odd_over?' @'+palpites.odd_over:''} ${r.over?'✓':'✗'}</span>`;
-      if (r.btts !== undefined) badges += `<span class="acerto-badge ${r.btts?'hit':'miss'}">${labelBtts[palpites.mercado_btts]||'BTTS'}${palpites.odd_btts?' @'+palpites.odd_btts:''} ${r.btts?'✓':'✗'}</span>`;
-      if (r.venc !== undefined) badges += `<span class="acerto-badge ${r.venc?'hit':'miss'}">${labelVenc[palpites.mercado_venc]||'Venc'}${palpites.odd_venc?' @'+palpites.odd_venc:''} ${r.venc?'✓':'✗'}</span>`;
-      if (r.placar !== undefined) badges += `<span class="acerto-badge ${r.placar?'hit':'miss'}">Placar ${palpites.placar_exato} ${r.placar?'✓':'✗'}</span>`;
-      resBlock = `<div class="hist-result-saved">
-        ⚽ <strong>${res.g1} × ${res.g2}</strong> &nbsp; ${badges}
-      </div>${res.nota ? `<div class="nota-salva">📝 ${res.nota}</div>` : ''}`;
-    } else {
-      // Sugestões automáticas baseadas nas estatísticas
-      const sugs = [];
-      if (h.over25 >= 65) sugs.push('Over 2.5');
-      else if (h.over25 < 45) sugs.push('Under 2.5');
-      if (h.btts >= 60) sugs.push('Ambos Marcam');
-      const mwVal = Math.max(h.v1, h.v2, h.emp);
-      if (h.v1 === mwVal && h.v1 > 40) sugs.push(`${h.t1} vence`);
-      else if (h.v2 === mwVal && h.v2 > 40) sugs.push(`${h.t2} vence`);
-      else if (h.emp === mwVal) sugs.push('Empate');
-      if (h.top3[0]) sugs.push(`Placar ${h.top3[0].s}`);
-
-      resBlock = `
-      <div class="palpites-form">
-        <div class="palpites-title">Meus Palpites</div>
-
-        <textarea id="pnota_${h.id}" class="palpite-nota" placeholder="Escreva seus palpites…" rows="2"></textarea>
-        <div class="sugestoes-chips" style="margin:5px 0 8px">
-          ${sugs.map(s=>`<button type="button" class="sug-chip" onclick="addSugestao('pnota_${h.id}','${s}')">${s}</button>`).join('')}
-        </div>
-
-        <div class="palpite-divider">Selecione seus mercados</div>
-
-        <div class="mercado-row">
-          <span class="odd-line-label">Over / Under</span>
-          <div class="mercado-opts" id="pover_${h.id}">
-            <button type="button" class="popt" onclick="selPalpite('pover_${h.id}', this, 'over25')">Over 2.5</button>
-            <button type="button" class="popt" onclick="selPalpite('pover_${h.id}', this, 'over15')">Over 1.5</button>
-            <button type="button" class="popt" onclick="selPalpite('pover_${h.id}', this, 'under25')">Under 2.5</button>
-            <button type="button" class="popt" onclick="selPalpite('pover_${h.id}', this, 'under15')">Under 1.5</button>
-          </div>
-        </div>
-
-        <div class="mercado-row">
-          <span class="odd-line-label">BTTS</span>
-          <div class="mercado-opts" id="pbtts_${h.id}">
-            <button type="button" class="popt" onclick="selPalpite('pbtts_${h.id}', this, 'sim')">Sim</button>
-            <button type="button" class="popt" onclick="selPalpite('pbtts_${h.id}', this, 'nao')">Não</button>
-          </div>
-        </div>
-
-        <div class="mercado-row">
-          <span class="odd-line-label">Vencedor</span>
-          <div class="mercado-opts" id="pvenc_${h.id}">
-            <button type="button" class="popt" onclick="selPalpite('pvenc_${h.id}', this, 't1')">${h.t1}</button>
-            <button type="button" class="popt" onclick="selPalpite('pvenc_${h.id}', this, 'emp')">Empate</button>
-            <button type="button" class="popt" onclick="selPalpite('pvenc_${h.id}', this, 't2')">${h.t2}</button>
-          </div>
-        </div>
-
-        <div class="mercado-row">
-          <span class="odd-line-label">Placar</span>
-          <div class="mercado-opts" id="pplacar_${h.id}">
-            ${h.top3.map(p=>`<button type="button" class="popt" onclick="selPalpite('pplacar_${h.id}', this, '${p.s.replace(' × ', 'x')}')">${p.s}</button>`).join('')}
-          </div>
-        </div>
-
-        <div class="palpite-divider">Odds dos Mercados</div>
-
-        <div class="odd-line">
-          <span class="odd-line-label">Gols (Over/Under)</span>
-          <input type="number" step="0.01" min="1" id="odd_over_${h.id}" class="odd-input" placeholder="1.00">
-        </div>
-        <div class="odd-line">
-          <span class="odd-line-label">BTTS</span>
-          <input type="number" step="0.01" min="1" id="odd_btts_${h.id}" class="odd-input" placeholder="1.00">
-        </div>
-        <div class="odd-line">
-          <span class="odd-line-label">Vencedor</span>
-          <input type="number" step="0.01" min="1" id="odd_venc_${h.id}" class="odd-input" placeholder="1.00">
-        </div>
-
-        <div class="palpite-divider">Placar Real</div>
-        <div class="mercado-row" style="align-items:center">
-          <div class="score-inputs">
-            <input type="number" id="hres1_${h.id}" min="0" max="20" placeholder="0">
-            <span class="score-sep">×</span>
-            <input type="number" id="hres2_${h.id}" min="0" max="20" placeholder="0">
-          </div>
-          <button class="btn-save-result" style="margin-left:auto" onclick="salvarResultado(${h.id})">Registrar</button>
-        </div>
-      </div>`;
-    }
-
-    return `<div class="hist-card" id="hcard_${h.id}">
-      <div class="hist-card-header" onclick="toggleCard(${h.id})">
-        <div class="hist-card-matchup">
-          <div class="hist-card-teams">${h.t1} × ${h.t2}</div>
-          <div class="hist-card-date">${fmtDate(h.ts)}</div>
-        </div>
-        <span class="hist-card-badge ${h.iaC}">${bl}</span>
-        <span class="hist-card-toggle">▼</span>
-      </div>
-      <div class="hist-card-body">
-        <div class="hist-mini-stats">
-          <div class="hist-mini-stat"><div class="hlabel">xG</div><div class="hvalue blue">${h.lambda}</div></div>
-          <div class="hist-mini-stat"><div class="hlabel">Over 2.5</div><div class="hvalue ${colorPct(h.over25)}">${h.over25}%</div></div>
-          <div class="hist-mini-stat"><div class="hlabel">BTTS</div><div class="hvalue ${colorPct(h.btts)}">${h.btts}%</div></div>
-        </div>
-        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Top 3 Placares</div>
-        <div class="hist-placares">
-          ${h.top3.map((p,i)=>`<div class="hist-placar-row">
-            <span style="color:${i===0?'var(--green)':'var(--muted)'};font-size:10px;font-weight:700;width:14px">${i+1}</span>
-            <span class="hist-placar-score">${p.s}</span>
-            <span style="margin-left:auto;font-size:11px;color:var(--muted)">${p.p}%</span>
-          </div>`).join('')}
-        </div>
-        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:8px 0 5px">Probabilidades</div>
-        <div class="hist-win-row">
-          <div class="hist-win-cell ${h.v1===mw?'best':''}"><div class="wlabel">${h.t1}</div><div class="wvalue">${h.v1}%</div></div>
-          <div class="hist-win-cell"><div class="wlabel">Empate</div><div class="wvalue">${h.emp}%</div></div>
-          <div class="hist-win-cell ${h.v2===mw?'best':''}"><div class="wlabel">${h.t2}</div><div class="wvalue">${h.v2}%</div></div>
-        </div>
-        ${resBlock}
-        <div class="hist-footer">
-          <div style="font-size:10px;color:var(--muted)">${h.iaD}</div>
-          <button class="btn-del-hist" onclick="deletarItem(${h.id})">Remover</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ─── SELEÇÃO DE PALPITE ────────────────────
-function selPalpite(groupId, btn, val) {
-  const group = document.getElementById(groupId);
-  if (!group) return;
-  group.querySelectorAll('.popt').forEach(b=>b.classList.remove('selected'));
-  btn.classList.add('selected');
-  btn.dataset.val = val;
-}
-
-// Override salvarResultado para ler palpites dos botões e nota livre
-const _salvarResultadoOrig = salvarResultado;
-window.salvarResultado = function(id) {
-  const h=getHist(); const idx=h.findIndex(x=>x.id===id); if(idx===-1) return;
-  const palpites = {};
-  const overSel = document.querySelector(`#pover_${id} .popt.selected`);
-  const bttsSel = document.querySelector(`#pbtts_${id} .popt.selected`);
-  const vencSel = document.querySelector(`#pvenc_${id} .popt.selected`);
-  const placarSel = document.querySelector(`#pplacar_${id} .popt.selected`);
-  if (overSel) palpites.mercado_over = overSel.dataset.val;
-  if (bttsSel) palpites.mercado_btts = bttsSel.dataset.val;
-  if (vencSel) palpites.mercado_venc = vencSel.dataset.val;
-  if (placarSel && placarSel.dataset.val !== 'outro') palpites.placar_exato = placarSel.dataset.val;
-  // Salvar odds
-  const oddOver = document.getElementById('odd_over_'+id); if(oddOver&&oddOver.value) palpites.odd_over = parseFloat(oddOver.value);
-  const oddBtts = document.getElementById('odd_btts_'+id); if(oddBtts&&oddBtts.value) palpites.odd_btts = parseFloat(oddBtts.value);
-  const oddVenc = document.getElementById('odd_venc_'+id); if(oddVenc&&oddVenc.value) palpites.odd_venc = parseFloat(oddVenc.value);
-  h[idx].palpites = palpites;
-  // Salvar nota livre
-  const notaEl = document.getElementById('pnota_'+id);
-  h[idx]._nota = notaEl ? notaEl.value.trim() : '';
-  setHist(h);
-  _salvarResultadoOrig(id);
-};
-
-// Injetar nota no resultado ao salvar
-const _salvarResultadoReal = salvarResultado;
-// Patch: inject nota into resultado object after setHist inside _salvarResultadoOrig
-// We do it by patching getHist result before render — simpler: override again
-const __orig = window.salvarResultado;
-window.salvarResultado = function(id) {
-  __orig(id);
-  // After save, patch nota into resultado
-  const h2=getHist(); const idx2=h2.findIndex(x=>x.id===id);
-  if(idx2!==-1 && h2[idx2]._nota !== undefined && h2[idx2].resultado) {
-    h2[idx2].resultado.nota = h2[idx2]._nota;
-    setHist(h2);
-    renderHistorico();
-  }
-};
-
-// ─── ADICIONAR SUGESTÃO AO TEXTAREA ────────
-function addSugestao(textareaId, texto) {
-  const ta = document.getElementById(textareaId);
-  if (!ta) return;
-  const atual = ta.value.trim();
-  ta.value = atual ? atual + ' + ' + texto : texto;
-  ta.focus();
-}
-
-// ─── CALCULADORA DE ODDS & EV ──────────────
-function atualizarCalculadora() {
-  const prob = parseFloat(document.getElementById('calc_prob').value);
-  const oddJustaEl = document.getElementById('calc_odd_justa');
-  if (prob && prob > 0 && prob <= 100) {
-    oddJustaEl.textContent = (100 / prob).toFixed(2);
-  } else {
-    oddJustaEl.textContent = '—';
-  }
-
-  const oddRef = parseFloat(document.getElementById('calc_odd_ref').value);
-  const oddTomada = parseFloat(document.getElementById('calc_odd_tomada').value);
-  const evEl = document.getElementById('calc_ev');
-  const btnSave = document.getElementById('calc-btn-save');
-  evEl.classList.remove('pos', 'neg');
-  if (oddRef && oddRef >= 1 && oddTomada && oddTomada >= 1) {
-    const ev = (oddTomada / oddRef - 1) * 100;
-    evEl.textContent = (ev >= 0 ? '+' : '') + ev.toFixed(2) + '%';
-    evEl.classList.add(ev >= 0 ? 'pos' : 'neg');
-    btnSave.disabled = false;
-  } else {
-    evEl.textContent = '—';
-    btnSave.disabled = true;
-  }
-}
-
-function getCalcHist() { try { return JSON.parse(localStorage.getItem('xgols_calc_hist') || '[]'); } catch { return []; } }
-function setCalcHist(d) { localStorage.setItem('xgols_calc_hist', JSON.stringify(d)); }
-
-function salvarCalculadora() {
-  const t1 = document.getElementById('calc_time1').value.trim() || 'Time da Casa';
-  const t2 = document.getElementById('calc_time2').value.trim() || 'Time de Fora';
-  const palpite = document.getElementById('calc_palpite').value.trim();
-  const prob = parseFloat(document.getElementById('calc_prob').value) || null;
-  const oddRef = parseFloat(document.getElementById('calc_odd_ref').value);
-  const oddTomada = parseFloat(document.getElementById('calc_odd_tomada').value);
-  if (!oddRef || !oddTomada) return;
-  const ev = (oddTomada / oddRef - 1) * 100;
-
-  const item = {
-    id: Date.now(),
-    ts: Date.now(),
-    t1, t2, palpite,
-    prob: prob !== null ? +prob.toFixed(1) : null,
-    oddRef: +oddRef.toFixed(2),
-    oddTomada: +oddTomada.toFixed(2),
-    ev: +ev.toFixed(2)
-  };
-  const h = getCalcHist();
-  h.unshift(item);
-  setCalcHist(h);
-  renderCalculadora();
-  showToast('Salvo no histórico!');
-}
-
-function deletarItemCalculadora(id) {
-  const h = getCalcHist().filter(x => x.id !== id);
-  setCalcHist(h);
-  renderCalculadora();
-}
-
-function limparCalculadora() {
-  if (!confirm('Deseja apagar todo o histórico da calculadora?')) return;
-  localStorage.removeItem('xgols_calc_hist');
-  renderCalculadora();
-}
-
-function toggleCalcCard(id) {
-  const el = document.getElementById('chcard_' + id);
-  if (el) el.classList.toggle('expanded');
-}
-
-function renderCalculadora() {
-  const h = getCalcHist();
-  const countEl = document.getElementById('calc-hist-count');
-  const listaEl = document.getElementById('calc-hist-lista');
-  if (!countEl || !listaEl) return;
-  countEl.textContent = h.length + (h.length === 1 ? ' registro' : ' registros');
-  listaEl.innerHTML = h.map(x => {
-    const badgeClass = x.ev >= 5 ? 'forte' : x.ev >= 0 ? 'moderada' : 'evitar';
-    return `<div class="hist-card" id="chcard_${x.id}">
-      <div class="hist-card-header" onclick="toggleCalcCard(${x.id})">
-        <div class="hist-card-matchup">
-          <div class="hist-card-teams">${x.t1} × ${x.t2}</div>
-          <div class="hist-card-date">${fmtDate(x.ts)}</div>
-        </div>
-        <span class="hist-card-badge ${badgeClass}">${x.ev >= 0 ? '+' : ''}${x.ev}% EV</span>
-        <span class="hist-card-toggle">▼</span>
-      </div>
-      <div class="hist-card-body">
-        ${x.palpite ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">🎯 ${x.palpite}</div>` : ''}
-        <div class="hist-mini-stats">
-          <div class="hist-mini-stat"><div class="hlabel">Prob (%)</div><div class="hvalue blue">${x.prob !== null ? x.prob + '%' : '—'}</div></div>
-          <div class="hist-mini-stat"><div class="hlabel">Ref / Tomada</div><div class="hvalue">${x.oddRef} / ${x.oddTomada}</div></div>
-          <div class="hist-mini-stat"><div class="hlabel">EV (%)</div><div class="hvalue ${x.ev >= 0 ? 'green' : 'red'}">${x.ev >= 0 ? '+' : ''}${x.ev}%</div></div>
-        </div>
-        <div class="hist-footer">
-          <div></div>
-          <button class="btn-del-hist" onclick="deletarItemCalculadora(${x.id})">Remover</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('') || '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">Nenhum registro salvo ainda.</div>';
-}
-
-// ─── TOAST ─────────────────────────────────
-function showToast(msg) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
-}
+var bki=document.getElementById("bkin");
+if(S.banca>0)bki.value=S.banca;
+bki.addEventListener("input",function(){var v=parseFloat(bki.value);S.banca=v>0?v:0;save();render()});
+buildCfg();render();
+setInterval(render,60000);
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
