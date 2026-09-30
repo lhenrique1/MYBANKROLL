@@ -86,6 +86,27 @@ main{padding-bottom:24px}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
+@media (min-width:900px){
+  body{font-size:17px}
+  main{max-width:1600px;padding:24px 40px 48px}
+  h1{font-size:26px}
+  .pill{font-size:17px;padding:8px 18px}
+  .dock{max-width:900px}
+  .tabs{margin:0 0 18px}
+  .tab{flex-direction:row;justify-content:center;gap:10px;font-size:15px;padding:12px 8px 10px}
+  .tab svg{width:22px;height:22px}
+  .pnl{font-size:52px}
+  .slots{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  #t-entrada{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+  #t-entrada>*{margin-bottom:0!important}
+  #t-entrada>.card{grid-column:1;grid-row:1 / span 3}
+  #t-entrada>#status{grid-column:2;grid-row:1}
+  #t-entrada>.row{grid-column:2}
+  #t-metrica{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+  #t-metrica>.card{margin-bottom:0}
+  #sheet{align-items:center}
+  .panel{border-radius:18px;max-width:560px;max-height:90%}
+}
 </style>
 </head>
 <body>
