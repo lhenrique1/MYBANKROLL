@@ -323,7 +323,7 @@ function render(){
   var st=document.getElementById("status");
   if(lk){st.className="status lk";st.innerHTML="<b>Profit travado</b><span>"+lk+"</span>"}
   else{st.className="status ok";var n=e.length+1;
-    st.innerHTML="<b>Liberado para operar</b><span>Tentativa "+n+" de "+c.tentativas+". Ainda pode perder "+brl(c.perdaMax+p)+(sel===cur?" hoje.":" neste dia.")</span>"}
+    st.innerHTML="<b>Liberado para operar</b><span>Tentativa "+n+" de "+c.tentativas+". Ainda pode perder "+brl(c.perdaMax+p)+(sel===cur?" hoje.":" neste dia.")+"</span>"}
   var pe=document.getElementById("pnl");pe.textContent=brl(p);pe.className="pnl "+(p>0?"pos":p<0?"neg":"");
   var h="";
   for(var i=0;i<c.tentativas;i++){
