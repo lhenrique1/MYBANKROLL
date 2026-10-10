@@ -124,6 +124,9 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
 .cal-g .d.td{box-shadow:inset 0 0 0 2px var(--ink)}
 .cal-g .d.sl{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .cal-g .d.lk::after{content:"🔒";position:absolute;top:0;right:1px;font-size:9px}
+.cloud{font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);margin-bottom:8px}
+.cloud.ok{border-color:var(--gain);color:var(--gain)}.cloud.err{border-color:var(--loss);color:var(--loss)}
+textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospace;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);resize:vertical}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -185,6 +188,12 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
 </section>
 <section id="t-historico" hidden>
 <div class="card">
+  <strong>Exportar</strong>
+  <div class="drow" style="margin:10px 0 8px"><select id="expr" aria-label="Período" style="flex:1;max-width:none"><option value="all">Todo o período</option><option value="month">Este mês</option><option value="week">Últimos 7 dias</option></select></div>
+  <div class="drow" style="margin:0"><button class="sec" id="expcsv" style="flex:1">Baixar CSV</button><button class="sec" id="exppdf" style="flex:1">Baixar PDF</button><button class="sec" id="expshr" style="flex:1" hidden>Compartilhar</button></div>
+  <div class="hint" id="expmsg"></div>
+</div>
+<div class="card">
   <strong>Últimos dias</strong>
   <table id="hist"><tbody></tbody></table>
 </div>
@@ -212,6 +221,11 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
     <div class="lbl">Parâmetros</div>
     <div class="cfgs" id="cfg"></div>
     <div class="calc" id="calc"></div>
+    <div class="lbl" style="margin-top:18px">Sincronização e backup</div>
+    <div id="cloud" class="cloud"></div>
+    <textarea id="bkt" rows="3" spellcheck="false" placeholder="Cole aqui um backup para restaurar"></textarea>
+    <div class="row" style="margin-top:8px"><button class="sec" id="bkgen">Gerar backup</button><button class="sec" id="bkres">Restaurar</button></div>
+    <div class="hint" id="bkmsg"></div>
   </div>
 </div>
 <div id="dlg" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9">
@@ -219,9 +233,10 @@ select{font:500 15px "IBM Plex Sans",system-ui,sans-serif;padding:9px 10px;borde
 <script>
 var KEY="controlador-win-v1";
 var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2,meta:0,ativo:"WIN"};
-var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos"};
-try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
+var cloudRef=null,CLOUD=false,pushT=null,cloudAt="";
+function save(){S.ua=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushCloud()}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 var cur=today(),sel=cur,calY=+cur.slice(0,4),calM=+cur.slice(5,7)-1;
 function brl(v){return (v<0?"-":"")+"R$ "+Math.abs(v).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}
@@ -399,7 +414,7 @@ function renderCorr(){
   if(S.corr.indexOf(S.corrAtiva)<0)S.corrAtiva=S.corr[0];
   var sel=document.getElementById("corrSel");sel.innerHTML="";
   S.corr.forEach(function(n){var o=document.createElement("option");o.value=n;o.textContent=n;if(n===S.corrAtiva)o.selected=true;sel.appendChild(o)});
-  document.getElementById("brk").textContent=S.corrAtiva;
+  document.getElementById("brk").textContent=S.corrAtiva+(CLOUD?" · ☁":"");
   document.getElementById("corrDel").disabled=S.corr.length<2;
 }
 document.getElementById("corrSel").addEventListener("change",function(ev){S.corrAtiva=ev.target.value;save();renderCorr()});
@@ -455,6 +470,219 @@ bki.addEventListener("input",function(){var v=parseFloat(bki.value);S.banca=v>0?
 renderCorr();
 buildCfg();render();
 setInterval(render,60000);
+function sane(p){
+  if(!p||typeof p!=="object"||!p.days||typeof p.days!=="object")return false;
+  for(var k in p.days){if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!Array.isArray(p.days[k]))return false;
+    for(var i=0;i<p.days[k].length;i++){var x=p.days[k][i];if(!x||(x.r!=="gain"&&x.r!=="loss"))return false}}
+  return true;
+}
+function syncInputs(){
+  document.querySelectorAll("#cfg input[data-k]").forEach(function(el){el.value=S.cfg[el.dataset.k]});
+  var bi=document.getElementById("bkin");if(bi)bi.value=S.banca>0?S.banca:"";
+}
+function applyRemote(p){
+  if(!sane(p))return false;
+  S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lado=p.lado==="V"?"V":"C";
+  if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});
+  if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva;
+  var k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null)x.v=ev(x)});
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  syncInputs();renderCorr();side();render();
+  return true;
+}
+function setCloud(st){
+  var c=document.getElementById("cloud");if(!c)return;
+  var h=new Date(),hh=String(h.getHours()).padStart(2,"0")+":"+String(h.getMinutes()).padStart(2,"0");
+  if(st==="ok"){cloudAt=hh;c.className="cloud ok";c.textContent="☁ Nuvem ativa. Sincronizado às "+hh+". Abra o link pelo Claude em outro celular com a mesma conta."}
+  else if(st==="err"){c.className="cloud err";c.textContent="Falha ao enviar para a nuvem. Os dados continuam salvos neste aparelho. Tente de novo mais tarde."}
+  else{c.className="cloud";c.textContent="Nuvem indisponível neste endereço. Use o backup abaixo para levar os dados para outro aparelho."}
+}
+function pushCloud(){
+  if(!cloudRef)return;
+  clearTimeout(pushT);
+  pushT=setTimeout(function(){
+    var ua=S.ua;
+    cloudRef.set({payload:JSON.stringify(S),updatedAt:ua}).then(function(){setCloud("ok")},function(){setCloud("err")});
+  },700);
+}
+setCloud("off");
+(function(){
+  var gen=document.getElementById("bkgen"),res=document.getElementById("bkres"),ta=document.getElementById("bkt"),msg=document.getElementById("bkmsg");
+  gen.onclick=function(){
+    ta.value=JSON.stringify(S);ta.focus();ta.select();
+    var ok=false;try{ok=!!document.execCommand&&document.execCommand("copy")}catch(e){}
+    if(!ok&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(function(){msg.textContent="Backup copiado."},function(){msg.textContent="Selecione o texto e copie."});return}
+    msg.textContent=ok?"Backup copiado.":"Selecione o texto e copie.";
+  };
+  res.onclick=function(){
+    var p=null;try{p=JSON.parse(ta.value.trim())}catch(e){}
+    if(!sane(p)){msg.textContent="Backup inválido. Cole o texto completo gerado em outro aparelho.";return}
+    ask("Restaurar este backup? Os dados deste aparelho serão substituídos.",function(){
+      if(applyRemote(p)){save();ta.value="";msg.textContent="Backup restaurado."}
+    });
+  };
+})();
+(async function(){
+  try{
+    if(!window.claude||!window.claude.use)return;
+    var db=await window.claude.use("db"),user=await window.claude.use("user");
+    if(!db||!user)return;
+    var id=await user.id();if(!id)return;
+    var ref=db.collection("data/users/"+id).doc("tradercontrol");
+    var snap=await ref.get(),has=Object.keys(S.days).length>0;
+    cloudRef=ref;CLOUD=true;
+    if(snap.exists){
+      var d=snap.data()||{},ru=+d.updatedAt||0;
+      if(ru>S.ua){try{applyRemote(JSON.parse(d.payload))}catch(e){}}
+      else if(ru<S.ua){pushCloud()}
+    }else if(has||S.banca>0){pushCloud()}
+    ref.onSnapshot(function(sn){
+      if(!sn.exists)return;var d=sn.data()||{};
+      if((+d.updatedAt||0)>S.ua){try{applyRemote(JSON.parse(d.payload))}catch(e){}}
+    },function(){});
+    setCloud("ok");renderCorr();
+  }catch(e){setCloud("off")}
+})();
+
+/* ===== Exportação: CSV e relatório em PDF ===== */
+function dmy(k){return k.split("-").reverse().join("/")}
+function keyOff(n){var y=+cur.slice(0,4),m=+cur.slice(5,7)-1,d=+cur.slice(8,10),t=new Date(y,m,d+n);return dkey(t.getFullYear(),t.getMonth(),t.getDate())}
+function exRows(){
+  var f=document.getElementById("expr").value,out=[];
+  Object.keys(S.days).sort().forEach(function(d){
+    if(f==="month"&&d.slice(0,7)!==cur.slice(0,7))return;
+    if(f==="week"&&(d<keyOff(-6)||d>cur))return;
+    S.days[d].forEach(function(x,i){out.push({d:d,i:i+1,x:x})});
+  });
+  return out;
+}
+function exLabel(){var f=document.getElementById("expr").value;return f==="month"?"Este mês":f==="week"?"Últimos 7 dias":"Todo o período"}
+function money2(v){return v.toFixed(2).replace(".",",")}
+function csvQ(v,txt){v=String(v==null?"":v);if(txt&&/^[=+\-@]/.test(v))v="'"+v;return /[";\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function buildCsv(rs){
+  var L=["Data;Hora;Tentativa;Corretora;Lado;Resultado;Valor (R$)"];
+  rs.forEach(function(r){var x=r.x;
+    L.push([dmy(r.d),/^\d\d:\d\d$/.test(x.t)?x.t:"",r.i,csvQ(x.b,1),x.d==="C"?"Compra":x.d==="V"?"Venda":"",x.r==="gain"?"GAIN":"LOSS",money2(ev(x))].join(";"));
+  });
+  return "\ufeff"+L.join("\r\n")+"\r\n";
+}
+function stats(rs){
+  var n=rs.length,w=0,gc=0,gv=0,lucro=0,dias={},c=S.cfg;
+  rs.forEach(function(r){var x=r.x;if(x.r==="gain"){w++;if(x.d==="C")gc++;else if(x.d==="V")gv++}lucro+=ev(x);dias[r.d]=1});
+  return {n:n,w:w,l:n-w,rate:n?w/n*100:0,lim:c.loss/(c.gain+c.loss)*100,lucro:lucro,dias:Object.keys(dias).length,gc:gc,gv:gv};
+}
+function tw(t,sz,b){var w=0;t=String(t);for(var i=0;i<t.length;i++){var c=t[i];w+=/[0-9]/.test(c)?.556:(c===" "||c==="."||c===","||c==="/"||c===":")?.278:c==="-"?.333:/[A-Z]/.test(c)?.68:/[ilj'|]/.test(c)?.25:.53}return w*sz*(b?1.06:1)}
+function fit(t,mw,sz,b){t=String(t);while(t.length>1&&tw(t,sz,b)>mw)t=t.slice(0,-1);return t}
+function penc(t){return String(t).replace(/[^\x20-\x7E\xA0-\xFF]/g,"?").replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)")}
+function buildPdf(rs){
+  var W=595,H=842,M=40,pages=[],ops,y,st=stats(rs);
+  var G=[0.04,0.42,0.31],R=[0.76,0.23,0.16],K=[0.08,0.15,0.12],MU=[0.35,0.44,0.40],LN=[0.81,0.89,0.85],BG=[0.94,0.98,0.96],WH=[1,1,1];
+  function C(c,f){return c.join(" ")+(f?" rg":" RG")}
+  function np(){ops=[];pages.push(ops);y=H-M}
+  function T(x,yy,t,sz,b,c,al){var w=tw(t,sz,b);if(al==="r")x-=w;ops.push("BT /"+(b?"F2":"F1")+" "+sz+" Tf "+C(c||K,1)+" "+x.toFixed(1)+" "+yy.toFixed(1)+" Td ("+penc(t)+") Tj ET")}
+  function RF(x,yy,w,h,c){ops.push(C(c,1)+" "+x+" "+yy+" "+w+" "+h+" re f")}
+  function RS(x,yy,w,h,c){ops.push(C(c,0)+" 0.8 w "+x+" "+yy+" "+w+" "+h+" re S")}
+  function HL(x1,x2,yy,c){ops.push(C(c,0)+" 0.5 w "+x1+" "+yy+" m "+x2+" "+yy+" l S")}
+  np();
+  RF(0,H-70,W,70,G);
+  T(M,H-38,"TraderControl",22,1,WH);
+  T(M,H-56,"Relatório de operações",11,0,WH);
+  T(W-M,H-38,"Gerado em "+dmy(cur),10,0,WH,"r");
+  T(W-M,H-56,exLabel(),10,0,WH,"r");
+  y=H-96;
+  var per=rs.length?dmy(rs[0].d)+" a "+dmy(rs[rs.length-1].d)+"  \xB7  "+st.dias+" dia"+(st.dias===1?"":"s")+" com operações":"Nenhuma operação registrada neste período";
+  T(M,y,per,10,0,MU);y-=18;
+  var cw=(W-2*M-30)/4,ch=56,x0=M;
+  var b=S.banca||0,tot=0,k;for(k in S.days)tot+=pnl(S.days[k]);
+  var cards=[["Lucro do período",brl(st.lucro),st.lucro>0?G:st.lucro<0?R:K,st.n+" entrada"+(st.n===1?"":"s")],
+             ["Taxa de acerto",st.n?fp(st.rate):"-",st.n?(st.rate>=st.lim?G:R):K,"limite "+fp(st.lim)],
+             ["Gain / Loss",st.w+" / "+st.l,K,"no período"],
+             b>0?["Banca atual",brl(b+tot),tot>=0?G:R,"inicial "+brl(b)]:["Banca","-",K,"não definida"]];
+  cards.forEach(function(c,i){var x=x0+i*(cw+10);RS(x,y-ch,cw,ch,LN);T(x+8,y-14,c[0],8.5,0,MU);T(x+8,y-33,fit(c[1],cw-14,13,1),13,1,c[2]);T(x+8,y-48,c[3],8,0,MU)});
+  y-=ch+22;
+  var gw=st.gc+st.gv;
+  T(M,y,"Onde estão os acertos",11,1,K);y-=16;
+  if(gw){
+    var bw=W-2*M,pc=st.gc/gw;
+    RF(M,y-10,bw*pc,10,G);RF(M+bw*pc,y-10,bw*(1-pc),10,R);
+    y-=24;T(M,y,"Compra "+fp(pc*100)+" ("+st.gc+" gain"+(st.gc===1?"":"s")+")",10,1,G);
+    T(W-M,y,"Venda "+fp((1-pc)*100)+" ("+st.gv+" gain"+(st.gv===1?"":"s")+")",10,1,R,"r");y-=24;
+  }else{T(M,y,"Sem acertos com lado (compra/venda) registrado.",10,0,MU);y-=24}
+  T(M,y,"Operações",11,1,K);y-=10;
+  var X={d:M,h:M+66,t:M+112,c:M+146,l:M+300,r:M+352,v:W-M};
+  function head(){RF(M,y-16,W-2*M,16,G);var yy=y-12;
+    T(X.d+4,yy,"Data",9,1,WH);T(X.h,yy,"Hora",9,1,WH);T(X.t,yy,"Tent.",9,1,WH);T(X.c,yy,"Corretora",9,1,WH);T(X.l,yy,"Lado",9,1,WH);T(X.r,yy,"Resultado",9,1,WH);T(X.v-4,yy,"Valor",9,1,WH,"r");y-=16}
+  head();
+  if(!rs.length){T(M+4,y-14,"Nada a exibir.",10,0,MU)}
+  var z=0,i=0;
+  while(i<rs.length){
+    var d=rs[i].d,sum=0,first=true;
+    while(i<rs.length&&rs[i].d===d){
+      var r=rs[i],x=r.x,v=ev(x),g=x.r==="gain";sum+=v;
+      if(y<70){np();head()}
+      if(z++%2===0)RF(M,y-14,W-2*M,14,BG);
+      var yy=y-10;
+      T(X.d+4,yy,dmy(d),9,0,K);T(X.h,yy,/^\d\d:\d\d$/.test(x.t)?x.t:"-",9,0,MU);T(X.t,yy,String(r.i),9,0,K);
+      T(X.c,yy,fit(x.b||"-",X.l-X.c-8,9),9,0,K);T(X.l,yy,x.d==="C"?"Compra":x.d==="V"?"Venda":"-",9,0,K);
+      T(X.r,yy,g?"GAIN":"LOSS",9,1,g?G:R);T(X.v-4,yy,(v>=0?"+":"")+brl(v),9,1,g?G:R,"r");
+      y-=14;i++;first=false;
+    }
+    if(y<70){np();head()}
+    HL(M,W-M,y,LN);
+    T(X.r,y-11,"Total do dia "+dmy(d),8.5,1,MU);T(X.v-4,y-11,(sum>=0?"+":"")+brl(sum),8.5,1,sum>=0?G:R,"r");y-=18;
+  }
+  pages.forEach(function(o,n){o.push("BT /F1 8 Tf "+C(MU,1)+" "+M+" 24 Td (TraderControl) Tj ET");
+    var t="Página "+(n+1)+" de "+pages.length,w=tw(t,8);o.push("BT /F1 8 Tf "+C(MU,1)+" "+(W-M-w).toFixed(1)+" 24 Td ("+t+") Tj ET")});
+  var objs=[],N=pages.length;
+  objs[1]="<< /Type /Catalog /Pages 2 0 R >>";
+  var kids=[];for(var p=0;p<N;p++)kids.push((5+2*p)+" 0 R");
+  objs[2]="<< /Type /Pages /Kids ["+kids.join(" ")+"] /Count "+N+" >>";
+  objs[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objs[4]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  pages.forEach(function(o,n){
+    var body=o.join("\n");
+    objs[5+2*n]="<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+W+" "+H+"] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents "+(6+2*n)+" 0 R >>";
+    objs[6+2*n]="<< /Length "+body.length+" >>\nstream\n"+body+"\nendstream";
+  });
+  var out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n",offs=[];
+  for(var q=1;q<objs.length;q++){offs[q]=out.length;out+=q+" 0 obj\n"+objs[q]+"\nendobj\n"}
+  var xr=out.length;
+  out+="xref\n0 "+objs.length+"\n0000000000 65535 f \n";
+  for(var q2=1;q2<objs.length;q2++)out+=String(offs[q2]).padStart(10,"0")+" 00000 n \n";
+  out+="trailer\n<< /Size "+objs.length+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF";
+  var u=new Uint8Array(out.length);for(var j=0;j<out.length;j++)u[j]=out.charCodeAt(j)&255;
+  return u;
+}
+async function deliver(name,data,mime,share){
+  var blob=new Blob([data],{type:mime});
+  if(share&&navigator.canShare&&navigator.share){
+    try{var f=new File([blob],name,{type:mime});
+      if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"TraderControl"});return "Compartilhado."}
+    }catch(e){if(e&&e.name==="AbortError")return "Compartilhamento cancelado."}
+  }
+  try{
+    if(window.claude&&window.claude.use){var dl=await window.claude.use("downloads");
+      if(dl){await dl.save({filename:name,data:blob});return (share?"Compartilhamento indisponível aqui. ":"")+"Arquivo pronto: "+name}}
+  }catch(e){if(e&&e.code==="declined")return "Download cancelado."}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},4000);
+  return (share?"Compartilhamento indisponível aqui. ":"")+"Baixando "+name;
+}
+(function(){
+  var msg=document.getElementById("expmsg"),shr=document.getElementById("expshr");
+  if(navigator.share&&navigator.canShare)shr.hidden=false;
+  function say(t){msg.textContent=t}
+  document.getElementById("expcsv").onclick=function(){
+    var rs=exRows();if(!rs.length){say("Não há entradas neste período.");return}
+    deliver("tradercontrol-"+cur+".csv",buildCsv(rs),"text/csv;charset=utf-8",false).then(say);
+  };
+  function pdf(share){
+    var rs=exRows();if(!rs.length){say("Não há entradas neste período.");return}
+    deliver("relatorio-tradercontrol-"+cur+".pdf",buildPdf(rs),"application/pdf",share).then(say);
+  }
+  document.getElementById("exppdf").onclick=function(){pdf(false)};
+  shr.onclick=function(){pdf(true)};
+})();
 </script>
 </body>
 </html>
