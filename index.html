@@ -70,10 +70,10 @@ label.prm{display:flex;align-items:center;justify-content:space-between;gap:12px
 .chip.ok{background:var(--gainbg);color:var(--gain)}.chip.no{background:var(--lossbg);color:var(--loss)}
 .top{padding:12px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pill{flex:none;background:transparent;color:var(--gain);border:2px solid var(--gain);border-radius:999px;padding:6px 14px;font:600 15px "IBM Plex Mono",monospace}
-.tabs{display:flex;position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--gain);margin:0 -16px 12px}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:transparent;color:var(--mut);border-radius:0;padding:6px 4px 5px;font-size:12px;font-weight:500;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs{display:flex;gap:4px;padding:4px;position:sticky;top:8px;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 0 0 8px var(--bg);margin:8px 0 18px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:transparent;color:var(--mut);border-radius:16px;padding:6px 4px 5px;font-size:12px;font-weight:500;border:1px solid transparent;transition:background .15s,color .15s}
 .tab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tab.on{color:var(--gain);border-bottom-color:var(--gain);background:var(--gainbg)}
+.tab.on{color:var(--gain);border-color:var(--gain);background:var(--gainbg);font-weight:600}
 .hr{display:flex;align-items:center;gap:8px;min-width:0}
 .kebab{flex:none;width:42px;height:42px;padding:0;border-radius:50%;background:transparent;border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center}
 .panel{width:100%;max-width:480px;box-sizing:border-box;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:88%;overflow-y:auto}
@@ -131,6 +131,8 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 .calc3 .tile{padding:8px}.calc3 .tile b{font-size:14px}
 .evs{width:100%;height:auto;display:block;margin-top:8px}
 .evs text{font:10px "IBM Plex Mono",monospace;fill:var(--mut)}
+.kebab{position:relative}
+.kebab.due::after{content:"";position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--loss);border:2px solid var(--bg)}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -140,8 +142,8 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
   h1{font-size:26px}
   .pill{font-size:17px;padding:8px 18px}
   .dock{max-width:900px}
-  .tabs{margin:0 0 18px}
-  .tab{flex-direction:row;justify-content:center;gap:10px;font-size:15px;padding:12px 8px 10px}
+  .tabs{margin:8px 0 20px;border-radius:999px;padding:5px}
+  .tab{flex-direction:row;justify-content:center;gap:10px;font-size:15px;padding:11px 8px;border-radius:999px}
   .tab svg{width:22px;height:22px}
   .pnl{font-size:52px}
   .slots{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
@@ -229,6 +231,9 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
     <div class="calc" id="calc"></div>
     <div class="lbl" style="margin-top:18px">Sincronização e backup</div>
     <div id="cloud" class="cloud"></div>
+    <div class="row" style="margin-bottom:6px"><button class="sec" id="bkfile">Salvar arquivo</button><button class="sec" id="bkshare" hidden>Compartilhar</button><button class="sec" id="bkload">Restaurar arquivo</button></div>
+    <input type="file" id="bkpick" accept=".json,.txt,application/json,text/plain" hidden>
+    <div class="hint" id="bkinfo" style="margin:0 0 12px"></div>
     <textarea id="bkt" rows="3" spellcheck="false" placeholder="Cole aqui um backup para restaurar"></textarea>
     <div class="row" style="margin-top:8px"><button class="sec" id="bkgen">Gerar backup</button><button class="sec" id="bkres">Restaurar</button></div>
     <div class="hint" id="bkmsg"></div>
@@ -239,8 +244,8 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 <script>
 var KEY="controlador-win-v1";
 var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2,meta:0,ativo:"WIN"};
-var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0};
-try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
+var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0,lastBackup:0};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
 var cloudRef=null,CLOUD=false,pushT=null,cloudAt="";
 function save(){S.ua=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushCloud()}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -343,6 +348,7 @@ function render(){
   dateUI();
   evo();
   chance();
+  backupUI();
   var st=document.getElementById("status");
   if(lk){st.className="status lk";st.innerHTML="<b>Profit travado</b><span>"+lk+"</span>"}
   else{st.className="status ok";var n=e.length+1;
@@ -490,7 +496,7 @@ function syncInputs(){
 }
 function applyRemote(p){
   if(!sane(p))return false;
-  S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lado=p.lado==="V"?"V":"C";
+  S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.lado=p.lado==="V"?"V":"C";
   if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});
   if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva;
   var k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null)x.v=ev(x)});
@@ -499,7 +505,7 @@ function applyRemote(p){
   return true;
 }
 function setCloud(st){
-  var c=document.getElementById("cloud");if(!c)return;
+  var c=document.getElementById("cloud");if(!c)return;if(typeof backupUI==="function")setTimeout(backupUI,0);
   var h=new Date(),hh=String(h.getHours()).padStart(2,"0")+":"+String(h.getMinutes()).padStart(2,"0");
   if(st==="ok"){cloudAt=hh;c.className="cloud ok";c.textContent="☁ Nuvem ativa. Sincronizado às "+hh+". Abra o link pelo Claude em outro celular com a mesma conta."}
   else if(st==="err"){c.className="cloud err";c.textContent="Falha ao enviar para a nuvem. Os dados continuam salvos neste aparelho. Tente de novo mais tarde."}
@@ -758,6 +764,53 @@ function chance(){
     '</div>'+
     '<div class="sub" style="margin:8px 0 0">'+(few?"Registre pelo menos 30 entradas ("+n+" até agora) para uma leitura confiável. ":"")+'Índice = chance de terminar no lucro após 250 entradas, em 2.000 simulações com estimativa conservadora.</div>';
 }
+
+/* ===== Backup em arquivo (para trocar de celular sem perder dados) ===== */
+function backupDue(){
+  if(CLOUD)return false;
+  var n=0,k;for(k in S.days)n+=S.days[k].length;
+  return n>0&&(Date.now()-(S.lastBackup||0)>7*864e5);
+}
+function backupUI(){
+  var kb=document.getElementById("kebab"),inf=document.getElementById("bkinfo");if(!kb||!inf)return;
+  kb.classList.toggle("due",backupDue());
+  var t;
+  if(CLOUD)t="☁ Seus dados também estão guardados na nuvem. Um arquivo de backup é uma cópia extra.";
+  else if(!S.lastBackup)t="Você ainda não salvou um backup. Salve o arquivo e guarde no Google Drive ou WhatsApp para não perder os registros ao trocar de celular.";
+  else{var dt=new Date(S.lastBackup),dias=Math.floor((Date.now()-S.lastBackup)/864e5);
+    t="Último backup: "+String(dt.getDate()).padStart(2,"0")+"/"+String(dt.getMonth()+1).padStart(2,"0")+"/"+dt.getFullYear()+" às "+String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0")+(dias>=7?" ("+dias+" dias atrás, faça um novo)":"")+"."}
+  inf.textContent=t;
+}
+(function(){
+  var msg=document.getElementById("bkmsg"),pick=document.getElementById("bkpick"),shr=document.getElementById("bkshare");
+  if(navigator.share&&navigator.canShare)shr.hidden=false;
+  function file(share){
+    deliver("backup-tradercontrol-"+cur+".json",JSON.stringify(S),"application/json",share).then(function(m){
+      msg.textContent=m;
+      if(/(Baixando|Arquivo pronto|Compartilhado)/.test(m)){S.lastBackup=Date.now();save();backupUI()}
+    });
+  }
+  document.getElementById("bkfile").onclick=function(){file(false)};
+  shr.onclick=function(){file(true)};
+  document.getElementById("bkload").onclick=function(){pick.value="";pick.click()};
+  pick.addEventListener("change",function(){
+    var f=pick.files&&pick.files[0];if(!f)return;
+    if(f.size>5e6){msg.textContent="Arquivo grande demais para ser um backup.";return}
+    var fr=new FileReader();
+    fr.onload=function(){
+      var p=null;try{p=JSON.parse(String(fr.result).replace(/^\ufeff/,""))}catch(e){}
+      if(!sane(p)){msg.textContent="Arquivo inválido. Escolha um backup gerado pelo TraderControl.";return}
+      ask("Restaurar o backup "+f.name+"? Os dados deste aparelho serão substituídos.",function(){
+        if(applyRemote(p)){save();msg.textContent="Backup restaurado.";backupUI()}
+      });
+    };
+    fr.onerror=function(){msg.textContent="Não foi possível ler o arquivo."};
+    fr.readAsText(f);
+  });
+  /* o botão de texto também conta como backup */
+  var g=document.getElementById("bkgen"),old=g.onclick;
+  g.onclick=function(){old&&old.call(g);S.lastBackup=Date.now();save();backupUI()};
+})();
 </script>
 </body>
 </html>
