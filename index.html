@@ -133,6 +133,10 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 .evs text{font:10px "IBM Plex Mono",monospace;fill:var(--mut)}
 .kebab{position:relative}
 .kebab.due::after{content:"";position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--loss);border:2px solid var(--bg)}
+.prm input[type=checkbox]{width:24px;height:24px;padding:0;accent-color:var(--gain);flex:none}
+.chipx{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 2px 2px 10px;font-size:13px;margin:0 6px 6px 0;background:var(--card)}
+.chipx button{flex:none;padding:0 8px;background:transparent;color:var(--mut);font-size:16px;border-radius:999px}
+.cal-g .d.nb{background:repeating-linear-gradient(45deg,transparent 0 5px,var(--line) 5px 6px);color:var(--mut)}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -229,6 +233,11 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
     <div class="lbl">Parâmetros</div>
     <div class="cfgs" id="cfg"></div>
     <div class="calc" id="calc"></div>
+    <div class="lbl" style="margin-top:18px">Dias sem operar</div>
+    <label class="prm"><span>Fins de semana<small>sábado e domingo</small></span><input type="checkbox" id="nowk"></label>
+    <label class="prm"><span>Feriados da B3<small>calendário padrão da bolsa</small></span><input type="checkbox" id="nohol"></label>
+    <div class="addb"><input id="nodate" type="date" aria-label="Bloquear outro dia"><button class="sec" id="noadd" style="flex:none;padding:9px 14px">Bloquear dia</button></div>
+    <div id="nolist" style="margin:10px 0 4px"></div>
     <div class="lbl" style="margin-top:18px">Sincronização e backup</div>
     <div id="cloud" class="cloud"></div>
     <div class="row" style="margin-bottom:6px"><button class="sec" id="bkfile">Salvar arquivo</button><button class="sec" id="bkshare" hidden>Compartilhar</button><button class="sec" id="bkload">Restaurar arquivo</button></div>
@@ -244,8 +253,8 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 <script>
 var KEY="controlador-win-v1";
 var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2,meta:0,ativo:"WIN"};
-var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0,lastBackup:0};
-try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
+var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0,lastBackup:0,noOp:{wk:true,hol:true,extra:[],free:[]}};
+try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.noOp=normNo(p.noOp);if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
 var cloudRef=null,CLOUD=false,pushT=null,cloudAt="";
 function save(){S.ua=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushCloud()}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -257,8 +266,9 @@ function ev(x){return x.v!=null?x.v:(x.r==="gain"?val(S.cfg.gain):-val(S.cfg.los
 function sg(x){var v=ev(x);return (v>=0?"+":"")+brl(v)}
 function pnl(e){return e.reduce(function(a,x){return a+ev(x)},0)}
 (function(){var ch=false,k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null){x.v=ev(x);ch=true}});if(ch)save()})();
-function lockState(){return lockOf(ents())}
-function lockOf(e){
+function lockState(){return lockOf(ents(),sel)}
+function lockOf(e,k){
+  var br=blockReason(k||sel);if(br)return "Dia sem operação ("+br+").";
   var p=pnl(e),T=sel===cur?"até amanhã.":"neste dia.";
   if(S.cfg.meta>0&&p>=S.cfg.meta)return "Meta diária atingida. Ordens bloqueadas "+T;
   if(p<=-S.cfg.perdaMax)return "Perda máxima diária atingida. Ordens bloqueadas "+T;
@@ -353,6 +363,8 @@ function render(){
   if(lk){st.className="status lk";st.innerHTML="<b>Profit travado</b><span>"+lk+"</span>"}
   else{st.className="status ok";var n=e.length+1;
     st.innerHTML="<b>Liberado para operar</b><span>Tentativa "+n+" de "+c.tentativas+". Ainda pode perder "+brl(c.perdaMax+p)+(sel===cur?" hoje.":" neste dia.")+"</span>"}
+  if(blockReason(sel))st.innerHTML+='<button class="sec" data-free="1" style="margin-top:10px;width:100%;color:var(--ink)">Operar neste dia mesmo assim</button>';
+  noUI();
   var pe=document.getElementById("pnl");pe.textContent=brl(p);pe.className="pnl "+(p>0?"pos":p<0?"neg":"");
   var h="";
   for(var i=0;i<c.tentativas;i++){
@@ -458,7 +470,8 @@ function drawCal(){
   for(i=0;i<first;i++)h+="<i></i>";
   for(d=1;d<=n;d++){
     k=dkey(calY,calM,d);arr=S.days[k]||[];cl="d";
-    if(arr.length){v=pnl(arr);cl+=v>0?" gp":v<0?" gl":" gz";if(lockOf(arr))cl+=" lk"}
+    if(arr.length){v=pnl(arr);cl+=v>0?" gp":v<0?" gl":" gz";if(lockOf(arr,k))cl+=" lk"}
+    if(blockReason(k))cl+=" nb";
     if(k===cur)cl+=" td";if(k===sel)cl+=" sl";
     h+='<button class="'+cl+'" data-day="'+k+'">'+d+'</button>';
   }
@@ -496,7 +509,7 @@ function syncInputs(){
 }
 function applyRemote(p){
   if(!sane(p))return false;
-  S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.lado=p.lado==="V"?"V":"C";
+  S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.noOp=normNo(p.noOp);S.lado=p.lado==="V"?"V":"C";
   if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});
   if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva;
   var k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null)x.v=ev(x)});
@@ -810,6 +823,61 @@ function backupUI(){
   /* o botão de texto também conta como backup */
   var g=document.getElementById("bkgen"),old=g.onclick;
   g.onclick=function(){old&&old.call(g);S.lastBackup=Date.now();save();backupUI()};
+})();
+
+/* ===== Dias sem operar: fins de semana, feriados da B3 e dias bloqueados ===== */
+function normNo(x){
+  x=x&&typeof x==="object"?x:{};
+  var ok=function(a){return Array.isArray(a)?a.filter(function(d){return /^\d{4}-\d{2}-\d{2}$/.test(d)}):[]};
+  return {wk:x.wk!==false,hol:x.hol!==false,extra:ok(x.extra),free:ok(x.free)};
+}
+var HOL={};
+function holMap(y){
+  if(!HOL)HOL={};
+  if(HOL[y])return HOL[y];
+  var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1,o={};
+  function add(mm,dd,n){o[dkey(y,mm,dd)]=n}
+  function off(n,name){var t=new Date(y,mo-1,da+n);o[dkey(t.getFullYear(),t.getMonth(),t.getDate())]=name}
+  add(0,1,"Confraternização Universal");add(3,21,"Tiradentes");add(4,1,"Dia do Trabalho");add(8,7,"Independência");
+  add(9,12,"Nossa Senhora Aparecida");add(10,2,"Finados");add(10,15,"Proclamação da República");
+  if(y>=2024)add(10,20,"Consciência Negra");
+  add(11,24,"Véspera de Natal");add(11,25,"Natal");add(11,31,"Véspera de Ano Novo");
+  off(-48,"Carnaval");off(-47,"Carnaval");off(-2,"Sexta-feira Santa");off(60,"Corpus Christi");
+  return HOL[y]=o;
+}
+function blockReason(k){
+  var n=S.noOp;if(!n||!k||n.free.indexOf(k)>=0)return null;
+  if(n.extra.indexOf(k)>=0)return "bloqueado por você";
+  var y=+k.slice(0,4),dow=new Date(y,+k.slice(5,7)-1,+k.slice(8,10)).getDay();
+  if(n.wk&&(dow===0||dow===6))return dow===0?"domingo":"sábado";
+  if(n.hol){var h=holMap(y)[k];if(h)return "feriado: "+h}
+  return null;
+}
+function noUI(){
+  var n=S.noOp,w=document.getElementById("nowk"),h=document.getElementById("nohol"),l=document.getElementById("nolist"),t="";
+  if(!w||!h||!l)return;
+  w.checked=n.wk;h.checked=n.hol;
+  function chip(d,tx,kind){return '<span class="chipx">'+dmy(d)+" · "+tx+'<button data-rm="'+kind+"|"+d+'" aria-label="Remover">×</button></span>'}
+  n.extra.slice().sort().forEach(function(d){t+=chip(d,"bloqueado","extra")});
+  n.free.slice().sort().forEach(function(d){t+=chip(d,"liberado","free")});
+  l.innerHTML=t||'<span class="sub" style="margin:0">Nenhum dia extra bloqueado ou liberado.</span>';
+}
+(function(){
+  document.getElementById("nowk").addEventListener("change",function(ev){S.noOp.wk=ev.target.checked;save();render()});
+  document.getElementById("nohol").addEventListener("change",function(ev){S.noOp.hol=ev.target.checked;save();render()});
+  document.getElementById("noadd").onclick=function(){
+    var inp=document.getElementById("nodate"),d=inp.value;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;
+    S.noOp.free=S.noOp.free.filter(function(x){return x!==d});
+    if(S.noOp.extra.indexOf(d)<0)S.noOp.extra.push(d);
+    inp.value="";save();render();
+  };
+  document.addEventListener("click",function(ev){
+    var f=ev.target.closest("[data-free]");
+    if(f){if(S.noOp.free.indexOf(sel)<0)S.noOp.free.push(sel);S.noOp.extra=S.noOp.extra.filter(function(x){return x!==sel});save();render();return}
+    var r=ev.target.closest("[data-rm]");
+    if(r){var p=r.dataset.rm.split("|");S.noOp[p[0]]=S.noOp[p[0]].filter(function(x){return x!==p[1]});save();render()}
+  });
 })();
 </script>
 </body>
