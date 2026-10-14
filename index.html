@@ -137,6 +137,11 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 .chipx{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 2px 2px 10px;font-size:13px;margin:0 6px 6px 0;background:var(--card)}
 .chipx button{flex:none;padding:0 8px;background:transparent;color:var(--mut);font-size:16px;border-radius:999px}
 .cal-g .d.nb{background:repeating-linear-gradient(45deg,transparent 0 5px,var(--line) 5px 6px);color:var(--mut)}
+.selbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.selbar[hidden]{display:none}
+.selall{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink)}
+.selall input,#hist input.pk{width:22px;height:22px;padding:0;accent-color:var(--loss);flex:none}
+#hist tr.picked td{background:var(--lossbg)}
 [hidden]{display:none!important}
 .del{flex:none;padding:6px 10px;font-size:13px;background:transparent;color:var(--loss);border:1px solid var(--loss);border-radius:6px}
 .hint{font-size:13px;color:var(--mut);margin:8px 0 0}
@@ -204,7 +209,11 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
   <div class="hint" id="expmsg"></div>
 </div>
 <div class="card">
-  <strong>Últimos dias</strong>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><strong>Últimos dias</strong><button class="sec" id="selbtn" style="flex:none;padding:8px 14px">Selecionar</button></div>
+  <div class="selbar" id="selbar" hidden>
+    <label class="selall"><input type="checkbox" id="selall"><span id="selcount">Selecionar todos</span></label>
+    <button class="bl" id="seldel" style="flex:none;padding:8px 14px" disabled>Apagar</button>
+  </div>
   <table id="hist"><tbody></tbody></table>
 </div>
 </section>
@@ -376,8 +385,9 @@ function render(){
   document.getElementById("bg").disabled=!!lk;
   document.getElementById("bl").disabled=!!lk;
   document.getElementById("undo").disabled=!e.length;
-  var days=Object.keys(S.days).filter(function(k){return S.days[k].length}).sort().reverse().slice(0,10);
-  var tb=days.map(function(k){var v=pnl(S.days[k]);return "<tr data-d='"+k+"' style='cursor:pointer'><td>"+k.split("-").reverse().join("/")+"</td><td>"+S.days[k].length+(S.days[k].length>1?" entradas":" entrada")+"</td><td class='"+(v>0?"pos":v<0?"neg":"")+"'>"+brl(v)+"</td><td><button class='del' data-del='"+k+"' aria-label='Apagar dia'>Apagar</button></td></tr>"+detail(k)}).join("");
+  var days=Object.keys(S.days).filter(function(k){return S.days[k].length}).sort().reverse();
+  var tb=days.map(function(k){var v=pnl(S.days[k]);return "<tr data-d='"+k+"' class='"+(selMode&&picked[k]?"picked":"")+"' style='cursor:pointer'><td>"+k.split("-").reverse().join("/")+"</td><td>"+S.days[k].length+(S.days[k].length>1?" entradas":" entrada")+"</td><td class='"+(v>0?"pos":v<0?"neg":"")+"'>"+brl(v)+"</td><td>"+(selMode?"<input type='checkbox' class='pk' aria-label='Selecionar dia'"+(picked[k]?" checked":"")+">":"<button class='del' data-del='"+k+"' aria-label='Apagar dia'>Apagar</button>")+"</td></tr>"+(selMode?"":detail(k))}).join("");
+  selUI(days);
   document.querySelector("#hist tbody").innerHTML=tb||"<tr><td>Nenhuma entrada registrada ainda.</td></tr>";
 }
 function buildCfg(){
@@ -408,7 +418,7 @@ document.getElementById("dno").onclick=function(){dlg.hidden=true;dcb=null};
 document.getElementById("dyes").onclick=function(){dlg.hidden=true;var f=dcb;dcb=null;if(f)f()};
 function delDay(k){ask("Apagar o dia "+k.split("-").reverse().join("/")+" do histórico?",function(){delete S.days[k];save();render()})}
 var htb=document.querySelector("#hist tbody");
-htb.addEventListener("click",function(ev){var b=ev.target.closest("[data-del]");if(b){delDay(b.dataset.del);return}var tr=ev.target.closest("tr[data-d]");if(tr){OPEN[tr.dataset.d]=!OPEN[tr.dataset.d];render()}});
+htb.addEventListener("click",function(ev){if(selMode){var rw=ev.target.closest("tr[data-d]");if(rw){picked[rw.dataset.d]=!picked[rw.dataset.d];render()}return}var b=ev.target.closest("[data-del]");if(b){delDay(b.dataset.del);return}var tr=ev.target.closest("tr[data-d]");if(tr){OPEN[tr.dataset.d]=!OPEN[tr.dataset.d];render()}});
 htb.addEventListener("contextmenu",function(ev){ev.preventDefault();var tr=ev.target.closest("tr[data-d]");if(tr)delDay(tr.dataset.d)});
 var sheet=document.getElementById("sheet");
 document.getElementById("kebab").onclick=function(){sheet.hidden=false};
@@ -878,6 +888,31 @@ function noUI(){
     var r=ev.target.closest("[data-rm]");
     if(r){var p=r.dataset.rm.split("|");S.noOp[p[0]]=S.noOp[p[0]].filter(function(x){return x!==p[1]});save();render()}
   });
+})();
+
+/* ===== Selecionar e apagar vários dias do histórico ===== */
+var selMode=false,picked={};
+function allDays(){return Object.keys(S.days).filter(function(k){return S.days[k].length})}
+function selUI(days){
+  var bar=document.getElementById("selbar"),btn=document.getElementById("selbtn");if(!bar||!btn)return;
+  bar.hidden=!selMode;btn.textContent=selMode?"Cancelar":"Selecionar";
+  if(!selMode)return;
+  var n=days.filter(function(k){return picked[k]}).length,all=days.length>0&&n===days.length;
+  document.getElementById("selall").checked=all;
+  document.getElementById("selcount").textContent=n?n+" de "+days.length+" dia"+(days.length===1?"":"s")+" selecionado"+(n===1?"":"s"):"Selecionar todos ("+days.length+")";
+  var d=document.getElementById("seldel");d.disabled=!n;d.textContent=n?"Apagar ("+n+")":"Apagar";
+}
+(function(){
+  document.getElementById("selbtn").onclick=function(){selMode=!selMode;picked={};render()};
+  document.getElementById("selall").addEventListener("change",function(ev){
+    picked={};if(ev.target.checked)allDays().forEach(function(k){picked[k]=true});render();
+  });
+  document.getElementById("seldel").onclick=function(){
+    var ks=allDays().filter(function(k){return picked[k]});if(!ks.length)return;
+    var tot=allDays().length,ent=0;ks.forEach(function(k){ent+=S.days[k].length});
+    var msg=ks.length===tot?"Apagar TODOS os registros ("+ks.length+" dia"+(ks.length===1?"":"s")+", "+ent+" entrada"+(ent===1?"":"s")+")? Esta ação não pode ser desfeita.":"Apagar "+ks.length+" dia"+(ks.length===1?"":"s")+" ("+ent+" entrada"+(ent===1?"":"s")+")? Esta ação não pode ser desfeita.";
+    ask(msg,function(){ks.forEach(function(k){delete S.days[k]});selMode=false;picked={};save();render()});
+  };
 })();
 </script>
 </body>
