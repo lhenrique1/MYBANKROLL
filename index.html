@@ -138,7 +138,11 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 .chipx button{flex:none;padding:0 8px;background:transparent;color:var(--mut);font-size:16px;border-radius:999px}
 .cal-g .d.nb{background:repeating-linear-gradient(45deg,transparent 0 5px,var(--line) 5px 6px);color:var(--mut)}
 .selbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-.selbar[hidden]{display:none}
+.selbar.imt{width:100%;border-collapse:collapse;font:12px "IBM Plex Mono",monospace;margin-top:10px}
+.imt th{font:600 11px "IBM Plex Sans",system-ui,sans-serif;color:var(--mut);text-align:right;padding:4px 2px;border-bottom:1px solid var(--line)}
+.imt td{text-align:right;padding:6px 2px;border-bottom:1px solid var(--line);white-space:nowrap}
+.imt th:first-child,.imt td:first-child{text-align:left}
+[hidden]{display:none}
 .selall{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink)}
 .selall input,#hist input.pk{width:22px;height:22px;padding:0;accent-color:var(--loss);flex:none}
 #hist tr.picked td{background:var(--lossbg)}
@@ -219,6 +223,7 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 </section>
 <section id="t-metrica" hidden>
 <div class="card" id="resumo"></div>
+<div class="card" id="imp"></div>
 <div class="card" id="evo"></div>
 <div class="card" id="chance"></div>
 <div class="card" id="tx"></div>
@@ -241,6 +246,8 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
     <button class="sec" id="corrDel" style="width:100%;margin:8px 0 14px;color:var(--loss)">Remover selecionada</button>
     <div class="lbl">Parâmetros</div>
     <div class="cfgs" id="cfg"></div>
+    <label class="prm"><span>Descontar custos nos cálculos<small>taxas B3 e corretagem</small></span><input type="checkbox" id="nodesc"></label>
+    <label class="prm"><span>Descontar IR retido (1%)<small>dedo-duro sobre o lucro da operação</small></span><input type="checkbox" id="nodd"></label>
     <div class="calc" id="calc"></div>
     <div class="lbl" style="margin-top:18px">Dias sem operar</div>
     <label class="prm"><span>Fins de semana<small>sábado e domingo</small></span><input type="checkbox" id="nowk"></label>
@@ -261,7 +268,7 @@ textarea{width:100%;box-sizing:border-box;font:12px/1.4 "IBM Plex Mono",monospac
 <div class="card" style="max-width:340px;margin:0"><p id="dmsg" style="margin:0 0 14px"></p><div class="row"><button class="sec" id="dno">Cancelar</button><button class="bl" id="dyes">Apagar</button></div></div></div>
 <script>
 var KEY="controlador-win-v1";
-var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2,meta:0,ativo:"WIN"};
+var DEF={contratos:2,gain:375,loss:250,tentativas:2,perdaMax:200,ponto:0.2,meta:0,ativo:"WIN",taxa:0.5,corret:0,ir:20,desc:true,dd:true};
 var S={cfg:Object.assign({},DEF),days:{},banca:0,lado:"C",corr:["XP Investimentos"],corrAtiva:"XP Investimentos",ua:0,lastBackup:0,noOp:{wk:true,hol:true,extra:[],free:[]}};
 try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days||{};S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.noOp=normNo(p.noOp);if(p.lado==="V")S.lado="V";if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva}}catch(e){}
 var cloudRef=null,CLOUD=false,pushT=null,cloudAt="";
@@ -271,10 +278,15 @@ var cur=today(),sel=cur,calY=+cur.slice(0,4),calM=+cur.slice(5,7)-1;
 function brl(v){return (v<0?"-":"")+"R$ "+Math.abs(v).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".")}
 function val(pts){return pts*S.cfg.ponto*S.cfg.contratos}
 function ents(){return S.days[sel]||[]}
-function ev(x){return x.v!=null?x.v:(x.r==="gain"?val(S.cfg.gain):-val(S.cfg.loss))}
+function cost(){return S.cfg.contratos*((+S.cfg.taxa||0)+(+S.cfg.corret||0))}
+function parts(g,c){c=S.cfg.desc?(c!=null?c:cost()):0;var n=g-c,ir=(S.cfg.dd&&n>0)?n*0.01:0;return {g:g,c:c,ir:ir,net:n-ir}}
+function gNet(){return parts(val(S.cfg.gain)).net}
+function lNet(){return -parts(-val(S.cfg.loss)).net}
+function gross(x){return x.v!=null?x.v:(x.r==="gain"?val(S.cfg.gain):-val(S.cfg.loss))}
+function ev(x){return parts(gross(x),x.c).net}
 function sg(x){var v=ev(x);return (v>=0?"+":"")+brl(v)}
 function pnl(e){return e.reduce(function(a,x){return a+ev(x)},0)}
-(function(){var ch=false,k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null){x.v=ev(x);ch=true}});if(ch)save()})();
+(function(){var ch=false,k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null){x.v=gross(x);ch=true}if(x.c==null){x.c=cost();ch=true}});if(ch)save()})();
 function lockState(){return lockOf(ents(),sel)}
 function lockOf(e,k){
   var br=blockReason(k||sel);if(br)return "Dia sem operação ("+br+").";
@@ -288,7 +300,7 @@ function add(r){
   if(lockState())return;
   var d=new Date(),ti=document.getElementById("tin"),
   t=(ti&&ti.value)||(sel===cur?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"--:--");
-  (S.days[sel]=S.days[sel]||[]).push({r:r,t:t,v:(r==="gain"?val(S.cfg.gain):-val(S.cfg.loss)),b:S.corrAtiva,d:S.lado});
+  (S.days[sel]=S.days[sel]||[]).push({r:r,t:t,v:(r==="gain"?val(S.cfg.gain):-val(S.cfg.loss)),c:cost(),b:S.corrAtiva,d:S.lado});
   if(ti)ti.value="";
   save();render();
 }
@@ -323,13 +335,13 @@ function bank(){
     t("Banca atual",b>0?brl(atual):"—",acc>0?"pos":acc<0?"neg":"")+
     t("Acumulado",b>0?brl(acc):"—",acc>0?"pos":acc<0?"neg":"",pb(acc,b,true)+" sobre a inicial")+
     t("Hoje",pb(day,open,true),day>0?"pos":day<0?"neg":"","sobre a banca de abertura")+
-    t("Risco por operação",pb(val(c.loss),open,false),"","Perda máx. dia: "+pb(c.perdaMax,open,false));
+    t("Risco por operação",pb(lNet(),open,false),"","Perda máx. dia: "+pb(c.perdaMax,open,false));
 }
 function fp(v){return (Math.round(v*10)/10).toString().replace(".",",")+"%"}
 function rate(){
   var w=0,l=0,k,c=S.cfg;
   for(k in S.days)S.days[k].forEach(function(x){x.r==="gain"?w++:l++});
-  var n=w+l,lim=c.loss/(c.gain+c.loss)*100,pct=n?w/n*100:0,ok=n&&pct>=lim;
+  var n=w+l,lim=lNet()/(gNet()+lNet())*100,pct=n?w/n*100:0,ok=n&&pct>=lim;
   var chip=n?'<span class="chip '+(ok?"ok":"no")+'">'+(ok?"Acima do limite":"Abaixo do limite")+'</span>':'<span class="chip" style="background:var(--line);color:var(--mut)">Sem entradas</span>';
   document.getElementById("tx").innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center"><strong>Taxa de acerto</strong>'+chip+'</div>'+
@@ -357,16 +369,19 @@ function render(){
   if(today()!==cur){var wt=sel===cur;cur=today();if(wt)sel=cur}
   var e=ents(),p=pnl(e),lk=lockState(),c=S.cfg;
   document.getElementById("plano").innerHTML=
-    '<div class="tile"><small>Ganho</small><b class="big">'+c.gain+' pts</b><b class="val pos">+'+brl(val(c.gain))+'</b></div>'+
-    '<div class="tile"><small>Perda</small><b class="big">'+c.loss+' pts</b><b class="val neg">'+brl(-val(c.loss))+'</b></div>'+
+    '<div class="tile"><small>Ganho</small><b class="big">'+c.gain+' pts</b><b class="val pos">+'+brl(gNet())+'</b></div>'+
+    '<div class="tile"><small>Perda</small><b class="big">'+c.loss+' pts</b><b class="val neg">'+brl(-lNet())+'</b></div>'+
     '<div class="tile"><small>Contratos</small><b class="big">'+c.contratos+'</b><b class="val" style="color:var(--mut)">'+esc(c.ativo||"WIN")+'</b></div>';
-  document.getElementById("calc").innerHTML='<div class="tile"><small>Ganho por operação</small><b class="pos">+'+brl(val(c.gain))+'</b></div><div class="tile"><small>Perda por operação</small><b class="neg">'+brl(-val(c.loss))+'</b></div>';
+  function bd(g){var q=parts(g),f=function(v){return (v<0?"-":"")+brl(Math.abs(v)).replace("-","")};
+    return '<small>bruto '+(g>=0?"+":"")+brl(g)+'</small><small>taxas B3 '+(q.c?"-"+brl(q.c):brl(0))+'</small><small>IR retido 1% '+(q.ir?"-"+brl(q.ir):brl(0))+'</small>'}
+  document.getElementById("calc").innerHTML='<div class="tile"><small>Ganho por operação</small><b class="pos">'+(gNet()>=0?"+":"")+brl(gNet())+'</b>'+bd(val(c.gain))+'</div><div class="tile"><small>Perda por operação</small><b class="neg">'+brl(-lNet())+'</b>'+bd(-val(c.loss))+'</div>';
   bank();
   rate();
   side();
   dateUI();
   evo();
   chance();
+  imp();
   backupUI();
   var st=document.getElementById("status");
   if(lk){st.className="status lk";st.innerHTML="<b>Profit travado</b><span>"+lk+"</span>"}
@@ -391,7 +406,7 @@ function render(){
   document.querySelector("#hist tbody").innerHTML=tb||"<tr><td>Nenhuma entrada registrada ainda.</td></tr>";
 }
 function buildCfg(){
-  var f=[["ativo","Ativo","ex.: WIN, WDO","txt"],["contratos","Contratos","unidades","int"],["ponto","Valor do ponto","R$ por contrato","dec"],["gain","Ganho","pontos","dec"],["loss","Perda","pontos","dec"],["tentativas","Tentativas","por dia","int"],["perdaMax","Perda máxima diária","R$","dec"],["meta","Meta diária","R$ (0 = sem meta)","dec0"]];
+  var f=[["ativo","Ativo","ex.: WIN, WDO","txt"],["contratos","Contratos","unidades","int"],["ponto","Valor do ponto","R$ por contrato","dec"],["gain","Ganho","pontos","dec"],["loss","Perda","pontos","dec"],["tentativas","Tentativas","por dia","int"],["perdaMax","Perda máxima diária","R$","dec"],["meta","Meta diária","R$ (0 = sem meta)","dec0"],["taxa","Taxas B3","R$ por contrato, ida e volta","dec0"],["corret","Corretagem","R$ por contrato, ida e volta","dec0"],["ir","IR day trade","% sobre o lucro do mês","dec0"]];
   var g=document.getElementById("cfg");
   g.innerHTML=f.map(function(x){
     var txt=x[3]==="txt";
@@ -522,7 +537,7 @@ function applyRemote(p){
   S.cfg=Object.assign({},DEF,p.cfg);S.days=p.days;S.banca=+p.banca||0;S.ua=+p.ua||0;S.lastBackup=+p.lastBackup||0;S.noOp=normNo(p.noOp);S.lado=p.lado==="V"?"V":"C";
   if(Array.isArray(p.corr)&&p.corr.length)S.corr=p.corr.filter(function(x){return typeof x==="string"&&x});
   if(typeof p.corrAtiva==="string")S.corrAtiva=p.corrAtiva;
-  var k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null)x.v=ev(x)});
+  var k;for(k in S.days)S.days[k].forEach(function(x){if(x.v==null)x.v=gross(x);if(x.c==null)x.c=cost()});
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   syncInputs();renderCorr();side();render();
   return true;
@@ -597,16 +612,16 @@ function exLabel(){var f=document.getElementById("expr").value;return f==="month
 function money2(v){return v.toFixed(2).replace(".",",")}
 function csvQ(v,txt){v=String(v==null?"":v);if(txt&&/^[=+\-@]/.test(v))v="'"+v;return /[";\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function buildCsv(rs){
-  var L=["Data;Hora;Tentativa;Corretora;Lado;Resultado;Valor (R$)"];
+  var L=["Data;Hora;Tentativa;Corretora;Lado;Resultado;Bruto (R$);Custos (R$);IR retido 1% (R$);Líquido (R$)"];
   rs.forEach(function(r){var x=r.x;
-    L.push([dmy(r.d),/^\d\d:\d\d$/.test(x.t)?x.t:"",r.i,csvQ(x.b,1),x.d==="C"?"Compra":x.d==="V"?"Venda":"",x.r==="gain"?"GAIN":"LOSS",money2(ev(x))].join(";"));
+    L.push([dmy(r.d),/^\d\d:\d\d$/.test(x.t)?x.t:"",r.i,csvQ(x.b,1),x.d==="C"?"Compra":x.d==="V"?"Venda":"",x.r==="gain"?"GAIN":"LOSS",money2(gross(x)),money2(x.c||0),money2(Math.max(0,gross(x)-(x.c||0))*0.01),money2((gross(x)-(x.c||0))-Math.max(0,gross(x)-(x.c||0))*0.01)].join(";"));
   });
   return "\ufeff"+L.join("\r\n")+"\r\n";
 }
 function stats(rs){
   var n=rs.length,w=0,gc=0,gv=0,lucro=0,dias={},c=S.cfg;
-  rs.forEach(function(r){var x=r.x;if(x.r==="gain"){w++;if(x.d==="C")gc++;else if(x.d==="V")gv++}lucro+=ev(x);dias[r.d]=1});
-  return {n:n,w:w,l:n-w,rate:n?w/n*100:0,lim:c.loss/(c.gain+c.loss)*100,lucro:lucro,dias:Object.keys(dias).length,gc:gc,gv:gv};
+  var cust=0;rs.forEach(function(r){var x=r.x;if(x.r==="gain"){w++;if(x.d==="C")gc++;else if(x.d==="V")gv++}lucro+=ev(x);cust+=(x.c||0);dias[r.d]=1});
+  return {n:n,w:w,l:n-w,rate:n?w/n*100:0,lim:lNet()/(gNet()+lNet())*100,lucro:lucro,cust:cust,dias:Object.keys(dias).length,gc:gc,gv:gv};
 }
 function tw(t,sz,b){var w=0;t=String(t);for(var i=0;i<t.length;i++){var c=t[i];w+=/[0-9]/.test(c)?.556:(c===" "||c==="."||c===","||c==="/"||c===":")?.278:c==="-"?.333:/[A-Z]/.test(c)?.68:/[ilj'|]/.test(c)?.25:.53}return w*sz*(b?1.06:1)}
 function fit(t,mw,sz,b){t=String(t);while(t.length>1&&tw(t,sz,b)>mw)t=t.slice(0,-1);return t}
@@ -631,7 +646,7 @@ function buildPdf(rs){
   T(M,y,per,10,0,MU);y-=18;
   var cw=(W-2*M-30)/4,ch=56,x0=M;
   var b=S.banca||0,tot=0,k;for(k in S.days)tot+=pnl(S.days[k]);
-  var cards=[["Lucro do período",brl(st.lucro),st.lucro>0?G:st.lucro<0?R:K,st.n+" entrada"+(st.n===1?"":"s")],
+  var cards=[["Lucro do período",brl(st.lucro),st.lucro>0?G:st.lucro<0?R:K,st.n+" entrada"+(st.n===1?"":"s")+(S.cfg.desc&&st.cust>0?" \xB7 custos "+brl(st.cust):"")],
              ["Taxa de acerto",st.n?fp(st.rate):"-",st.n?(st.rate>=st.lim?G:R):K,"limite "+fp(st.lim)],
              ["Gain / Loss",st.w+" / "+st.l,K,"no período"],
              b>0?["Banca atual",brl(b+tot),tot>=0?G:R,"inicial "+brl(b)]:["Banca","-",K,"não definida"]];
@@ -767,7 +782,7 @@ function simulate(w,l,G,L,pb,b){
 function chance(){
   var el=document.getElementById("chance"),xs=allRows(),n=xs.length,c=S.cfg,b=S.banca||0;
   var w=0,gs=0,ls=0;xs.forEach(function(x){var v=ev(x);if(x.r==="gain"){w++;gs+=v}else ls+=-v});
-  var l=n-w,G=val(c.gain),L=val(c.loss),pb=c.loss/(c.gain+c.loss);
+  var l=n-w,G=gNet(),L=lNet(),pb=L/(G+L);
   var key=[w,l,G,L,b].join("|");if(key!==simKey){simKey=key;simRes=simulate(w,l,G,L,pb,b)}
   var idx=Math.round(simRes.pp),few=n<30;
   var lab=few?"Poucos dados":idx>=75?"Alta":idx>=55?"Moderada":"Baixa";
@@ -913,6 +928,53 @@ function selUI(days){
     var msg=ks.length===tot?"Apagar TODOS os registros ("+ks.length+" dia"+(ks.length===1?"":"s")+", "+ent+" entrada"+(ent===1?"":"s")+")? Esta ação não pode ser desfeita.":"Apagar "+ks.length+" dia"+(ks.length===1?"":"s")+" ("+ent+" entrada"+(ent===1?"":"s")+")? Esta ação não pode ser desfeita.";
     ask(msg,function(){ks.forEach(function(k){delete S.days[k]});selMode=false;picked={};save();render()});
   };
+})();
+
+/* ===== Custos B3 e imposto de renda (day trade) ===== */
+function taxMonths(){
+  var by={};
+  Object.keys(S.days).sort().forEach(function(d){
+    var m=d.slice(0,7),g=0,c=0,arr=S.days[d];if(!arr.length)return;
+    arr.forEach(function(x){g+=gross(x);c+=(x.c!=null?x.c:cost())});
+    var o=by[m]||(by[m]={m:m,gross:0,cost:0,irrf:0,n:0});
+    o.gross+=g;o.cost+=c;o.n+=arr.length;if(g-c>0)o.irrf+=(g-c)*0.01;
+  });
+  var carry=0,out=[],rate=(+S.cfg.ir||0)/100;
+  Object.keys(by).sort().forEach(function(m){
+    var o=by[m],net=o.gross-o.cost,base;
+    if(net<0){carry+=-net;base=0}else{var u=Math.min(carry,net);carry-=u;base=net-u}
+    o.net=net;o.ir=base*rate;o.pay=Math.max(0,o.ir-o.irrf);o.final=net-o.ir;o.carry=carry;out.push(o);
+  });
+  return out;
+}
+function imp(){
+  var el=document.getElementById("imp"),nd=document.getElementById("nodesc");if(!el)return;
+  if(nd)nd.checked=!!S.cfg.desc;var dd=document.getElementById("nodd");if(dd)dd.checked=!!S.cfg.dd;
+  var ms=taxMonths(),head='<div style="display:flex;justify-content:space-between;align-items:center"><strong>Custos e imposto de renda</strong><span class="chip" style="background:var(--line);color:var(--mut)">estimativa</span></div>';
+  if(!ms.length){el.innerHTML=head+'<div class="sub" style="margin:12px 0 0">Registre entradas para calcular custos e IR.</div>';return}
+  var key=cur.slice(0,7),o=ms.filter(function(x){return x.m===key})[0]||ms[ms.length-1];
+  function t(l,v,cl,x){return '<div class="tile"><small>'+l+'</small><b class="'+cl+'">'+v+'</b>'+(x?'<small>'+x+'</small>':'')+'</div>'}
+  function cc(v){return v>0?"pos":v<0?"neg":""}
+  var mm=o.m.slice(5,7)+"/"+o.m.slice(0,4);
+  var rows=ms.slice(-6).reverse().map(function(r){return '<tr><td>'+r.m.slice(5,7)+"/"+r.m.slice(2,4)+'</td><td class="'+cc(r.gross)+'">'+brl(r.gross)+'</td><td>'+brl(-r.cost)+'</td><td>'+brl(-r.ir)+'</td><td class="'+cc(r.final)+'"><b>'+brl(r.final)+'</b></td></tr>'}).join("");
+  el.innerHTML=head+
+    '<div class="sub" style="margin:10px 0 6px">Mês '+mm+(o.m===key?" (atual)":"")+'</div>'+
+    '<div class="calc" style="margin-top:0">'+
+      t("Resultado bruto",brl(o.gross),cc(o.gross))+
+      t("Custos B3 e corretagem",brl(-o.cost),o.cost>0?"neg":"")+
+      t("Após custos",brl(o.net),cc(o.net))+
+      t("IR estimado ("+fp(+S.cfg.ir||0)+")",brl(-o.ir),o.ir>0?"neg":"")+
+      t("Líquido final",brl(o.final),cc(o.final))+
+      t("IR retido na fonte (1%)",brl(-o.irrf),o.irrf>0?"neg":"","adiantamento, abate a DARF")+
+      t("DARF a pagar",brl(o.pay),o.pay>0?"neg":"","código 6015")+
+      t("Prejuízo a compensar",brl(o.carry),o.carry>0?"neg":"","vale para os próximos meses")+
+    '</div>'+
+    '<table class="imt"><thead><tr><th>Mês</th><th>Bruto</th><th>Custos</th><th>IR</th><th>Líquido</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="sub" style="margin:10px 0 0">Day trade: IR sobre o resultado do mês após custos, com prejuízos de meses anteriores compensados. A DARF vence no último dia útil do mês seguinte. Valores de taxas variam por corretora, então ajuste em Parâmetros. Confirme com seu contador.</div>';
+}
+(function(){
+  document.getElementById("nodd").addEventListener("change",function(ev){S.cfg.dd=ev.target.checked;save();render()});
+  document.getElementById("nodesc").addEventListener("change",function(ev){S.cfg.desc=ev.target.checked;save();render()});
 })();
 </script>
 </body>
